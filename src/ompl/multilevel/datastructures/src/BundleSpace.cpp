@@ -107,8 +107,9 @@ bool BundleSpace::makeProjection()
     std::vector<ProjectionPtr> projections;
     if (!hasBaseSpace())
     {
-        projections = 
-          projectionFactory.MakeProjections(getBundle());
+        return false;
+        // projections = 
+        //   projectionFactory.MakeProjections(getBundle());
     }
     else
     {

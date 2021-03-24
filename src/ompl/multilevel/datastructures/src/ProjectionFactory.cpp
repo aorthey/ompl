@@ -72,18 +72,18 @@ std::vector<ProjectionPtr>
 ProjectionFactory::MakeProjections(ompl::base::SpaceInformationPtr Bundle)
 {
     const base::StateSpacePtr Bundle_space = Bundle->getStateSpace();
-    int Projections = GetNumberOfComponents(Bundle_space);
+    int nrProjections = GetNumberOfComponents(Bundle_space);
 
     std::vector<ProjectionPtr> components;
 
-    OMPL_DEBUG("Bundle components: %d", Projections);
+    OMPL_DEBUG("Bundle components: %d", nrProjections);
 
-    if (Projections > 1)
+    if (nrProjections > 1)
     {
         base::CompoundStateSpace *Bundle_compound = Bundle_space->as<base::CompoundStateSpace>();
         const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
 
-        for (int m = 0; m < Projections; m++)
+        for (int m = 0; m < nrProjections; m++)
         {
             base::StateSpacePtr BundleM = Bundle_decomposed.at(m);
             ProjectionPtr componentM = MakeProjection(BundleM);
@@ -103,15 +103,15 @@ std::vector<ProjectionPtr> ProjectionFactory::MakeProjections(
     ompl::base::SpaceInformationPtr Bundle, ompl::base::SpaceInformationPtr Base)
 {
     const base::StateSpacePtr Bundle_space = Bundle->getStateSpace();
-    int Projections = GetNumberOfComponents(Bundle_space);
+    int nrProjections = GetNumberOfComponents(Bundle_space);
     const base::StateSpacePtr Base_space = Base->getStateSpace();
     int baseSpaceComponents = GetNumberOfComponents(Base_space);
 
-    if (baseSpaceComponents != Projections)
+    if (baseSpaceComponents != nrProjections)
     {
         Base->printSettings();
         OMPL_ERROR("Base Space has %d, but Bundle Space has %d components.", baseSpaceComponents,
-                   Projections);
+                   nrProjections);
         throw Exception("Different Number Of Components");
     }
 
@@ -124,7 +124,7 @@ std::vector<ProjectionPtr> ProjectionFactory::MakeProjections(
         areValidityCheckersEquivalent = true;
     }
 
-    if (Projections > 1)
+    if (nrProjections > 1)
     {
         base::CompoundStateSpace *Bundle_compound = Bundle_space->as<base::CompoundStateSpace>();
         base::CompoundStateSpace *Base_compound = Base_space->as<base::CompoundStateSpace>();
@@ -132,7 +132,7 @@ std::vector<ProjectionPtr> ProjectionFactory::MakeProjections(
         const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
         const std::vector<base::StateSpacePtr> Base_decomposed = Base_compound->getSubspaces();
 
-        for (int m = 0; m < Projections; m++)
+        for (int m = 0; m < nrProjections; m++)
         {
             base::StateSpacePtr BaseM = Base_decomposed.at(m);
             base::StateSpacePtr BundleM = Bundle_decomposed.at(m);
