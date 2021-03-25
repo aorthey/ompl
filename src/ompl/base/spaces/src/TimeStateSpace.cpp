@@ -127,7 +127,11 @@ void ompl::base::TimeStateSpace::deserialize(State *state, const void *serializa
 
 double ompl::base::TimeStateSpace::distance(const State *state1, const State *state2) const
 {
-    return fabs(state1->as<StateType>()->position - state2->as<StateType>()->position);
+    const double s1 = state1->as<StateType>()->position;
+    const double s2 = state2->as<StateType>()->position;
+    // if(s2 < s1) return std::numeric_limits<double>::infinity();
+    // else return fabs(s2 - s1);
+    return fabs(s2 - s1);
 }
 
 bool ompl::base::TimeStateSpace::equalStates(const State *state1, const State *state2) const
@@ -138,8 +142,17 @@ bool ompl::base::TimeStateSpace::equalStates(const State *state1, const State *s
 
 void ompl::base::TimeStateSpace::interpolate(const State *from, const State *to, const double t, State *state) const
 {
-    state->as<StateType>()->position =
-        from->as<StateType>()->position + (to->as<StateType>()->position - from->as<StateType>()->position) * t;
+    const double s1 = from->as<StateType>()->position;
+    const double s2 = to->as<StateType>()->position;
+    if(s2 < s1)
+    {
+      state->as<StateType>()->position =
+          from->as<StateType>()->position;
+    }else
+    {
+      state->as<StateType>()->position =
+          from->as<StateType>()->position + (to->as<StateType>()->position - from->as<StateType>()->position) * t;
+    }
 }
 
 ompl::base::StateSamplerPtr ompl::base::TimeStateSpace::allocDefaultStateSampler() const
