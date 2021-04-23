@@ -64,6 +64,15 @@ void TorusStateSampler::sampleUniform(State *state)
         const double &R = T->getMajorRadius();
         const double &r = T->getMinorRadius();
 
+        //NOTE: The idea here is to compute the norm of the gradient at each
+        //point of the surface (i.e. the gradient of the coordinate mapping from
+        //(u,v) to (x,y,z)). To get vprime, we divide by the maximum norm of the
+        //gradient over the whole surface. This gives a number between [0,1]. We
+        //then do rejection sampling, by choosing a random number in [0,1] and
+        //accept if vprime is larger than this random number. Surface elements
+        //with a high curvature will have a small norm and will therefore be
+        //penalized under this method (i.e. rejected more often).
+
         double vprime = (R + r * cos(v)) / (R + r);
 
         double mu = rng_.uniformReal(0, 1);
