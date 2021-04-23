@@ -58,8 +58,7 @@ namespace ompl
 
             void sampleGaussian(State *state, const State *mean, double stdDev) override;
         private:
-            // double gMax_{4.11746}; //maximum norm gradient of surface
-            const double gMax_{4.12}; //maximum norm gradient of surface
+            const double gMax_{4.12}; //maximum norm gradient of surface (do not change)
         };
 
         class KleinBottleStateSpace : public CompoundStateSpace

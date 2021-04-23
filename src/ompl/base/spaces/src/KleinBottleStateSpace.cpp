@@ -48,7 +48,6 @@ KleinBottleStateSampler::KleinBottleStateSampler(const StateSpace *space) : Stat
 {
 }
 
-//https://mathematica.stackexchange.com/questions/148693/generating-random-points-on-a-kleins-bottle
 void KleinBottleStateSampler::sampleUniform(State *state)
 {
     bool acceptedSampleFound = false;
@@ -65,6 +64,7 @@ void KleinBottleStateSampler::sampleUniform(State *state)
         //accept if vprime is larger than this random number. Surface elements
         //with a high curvature will have a small norm and will therefore be
         //penalized under this method (i.e. rejected more often).
+        //See also: https://mathematica.stackexchange.com/questions/148693/generating-random-points-on-a-kleins-bottle
 
         //NOTE: Automatic differential via sympy script
         double cu = cos(u);
@@ -101,34 +101,6 @@ void KleinBottleStateSampler::sampleUniform(State *state)
 
         double s = sqrtf(a*a*(0.16*c*c) + b*b*sv*sv + d*d);
 
-        /// Parameterization from stackoverflow. Depends on other params.
-        // const int usign = (pi - u > 0 ? 1 : 0 );
-        // double a1 = 6*cos(u)*cos(u) - 2*sin(u)*(3 + cos(v) + 3*sin(u)) + 2*cos(v)*(sin(2*u) - sin(u))*usign;
-        // double a2 = 16*cos(u) - 2*(cos(2*u) - 2*cos(u))*cos(v)*usign;
-        // double a3 = 2*sin(u)*sin(v);
-
-        // double b1 = 2*(cos(u) - 2)*sin(v)*((1 + cos(u))*usign - 1);
-        // double b2 = 2*(cos(u) - 2)*sin(u)*sin(v)*usign;
-        // double b3 = 2*(2 - cos(u))*cos(v);
-
-        // double s1 = a2*b3 - a3*b2;
-        // double s2 = a3*b1 - a1*b3;
-        // double s3 = a1*b2 - a2*b1;
-
-        // double s = sqrtf(s1*s1 + s2*s2 + s3*s3);
-
-        if(s > gMax_)
-        {
-          std::cout << std::string(80, '*') << std::endl;
-          std::cout << std::string(80, '*') << std::endl;
-          std::cout << std::string(80, '*') << std::endl;
-          std::cout << "MAX norm gradient:" << gMax_ << std::endl;
-          std::cout << std::string(80, '*') << std::endl;
-          std::cout << std::string(80, '*') << std::endl;
-          std::cout << std::string(80, '*') << std::endl;
-          exit(0);
-        }
-
         s = s/gMax_;
 
         double mu = rng_.uniformReal(0, 1);
@@ -164,10 +136,13 @@ KleinBottleStateSpace::KleinBottleStateSpace(double length):
   length_(length)
 {
     setName("KleinBottle" + getName());
+    type_ = STATE_SPACE_KLEIN_BOTTLE;
 
     //We model the Klein bottle as a regular cylinder, but where both ends are
-    //glued together in an inverse manner. Both interpolation and distance
-    //computation has to take this into account when crossing over the gluing.
+    //glued together in an inverse manner. For more information, check out the
+    //wikipedia article: https://en.wikipedia.org/wiki/Klein_bottle.
+    //Both interpolation and distance computation have to take 
+    //the gluing into account when crossing over the boundary.
     // ------<-------
     // |            |
     // |            |
