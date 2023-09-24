@@ -53,39 +53,6 @@ void WriteVisualization(const PlanarManipulator &manipulator, const PolyWorld *w
     fout.close();
 }
 
-class R2CollisionChecker : public ompl::base::StateValidityChecker
-{
-public:
-    R2CollisionChecker(const ompl::base::SpaceInformationPtr &si, const PolyWorld *world)
-      : ompl::base::StateValidityChecker(si), world_(world)
-    {
-    }
-
-    ~R2CollisionChecker() = default;
-
-    virtual bool isValid(const ompl::base::State *state) const
-    {
-        const double *angles = state->as<RealVectorStateSpace::StateType>()->values;
-        std::vector<Point> coordinates;
-        coordinates.push_back({angles[0], angles[1]});
-
-        //(1) check out of bounds
-        if (world_->outOfBounds(coordinates[0]))
-        {
-            return false;
-        }
-
-        // Check each coordinate for obstacle intersection.
-        for (size_t j = 0; j < world_->numObstacles(); ++j)
-            if (world_->obstacle(j).inside(coordinates[0]))
-                return false;
-
-        return true;
-    }
-
-private:
-    const PolyWorld *world_;
-};
 class SE2CollisionChecker : public ompl::base::StateValidityChecker
 {
 public:
@@ -105,13 +72,16 @@ public:
         coordinates.push_back({x, y});
 
         //(1) check out of bounds
-        if (world_->outOfBounds(coordinates[0]))
+        if (world_->outOfBounds(coordinates[0])) {
             return false;
+        }
 
         // Check each coordinate for obstacle intersection.
-        for (size_t j = 0; j < world_->numObstacles(); ++j)
-            if (world_->obstacle(j).inside(coordinates[0]))
+        for (size_t j = 0; j < world_->numObstacles(); ++j) {
+            if (world_->obstacle(j).inside(coordinates[0])) {
                 return false;
+            }
+        }
 
         return true;
     }
