@@ -1,7 +1,7 @@
 /*********************************************************************
 * Software License Agreement (BSD License)
 *
-*  Copyright (c) 2011, Rice University
+*  Copyright (c) 2023 
 *  All rights reserved.
 *
 *  Redistribution and use in source and binary forms, with or without
@@ -14,9 +14,6 @@
 *     copyright notice, this list of conditions and the following
 *     disclaimer in the documentation and/or other materials provided
 *     with the distribution.
-*   * Neither the name of the Rice University nor the names of its
-*     contributors may be used to endorse or promote products derived
-*     from this software without specific prior written permission.
 *
 *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -32,42 +29,43 @@
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
 
-/* Author: Ioan Sucan */
+/* Author: Andreas Orthey */
 
-#ifndef OMPL_BASE_GOAL_TYPES_
-#define OMPL_BASE_GOAL_TYPES_
+#ifndef OMPL_BASE_GOALS_FACTORED_GOAL_
+#define OMPL_BASE_GOALS_FACTORED_GOAL_
+
+#include <optional>
+
+#include "ompl/base/goals/GoalSampleableRegion.h"
+#include "ompl/multilevel/datastructures/FactoredSpaceInformation.h"
+#include "ompl/base/ScopedState.h"
 
 namespace ompl
 {
     namespace base
     {
-        /** \brief The type of goal */
-        enum GoalType
+        OMPL_CLASS_FORWARD(GoalSampleableRegion);
+
+        /** \brief Definition of a factored goal */
+        class FactoredGoal : public GoalSampleableRegion
         {
-            /** \brief This bit is set if casting to generic goal regions (ompl::base::Goal) is possible. This bit shold
-               always be set */
-            GOAL_ANY = 1,
+        public:
+            FactoredGoal(const multilevel::FactoredSpaceInformationPtr& si, const std::unordered_map<std::string, GoalSampleableRegionPtr>& goals);
 
-            /** \brief This bit is set if casting to goal regions (ompl::base::GoalRegion) is possible */
-            GOAL_REGION = GOAL_ANY + 2,
+            ~FactoredGoal() override;
 
-            /** \brief This bit is set if casting to sampleable goal regions (ompl::base::GoalSampleableRegion) is
-               possible */
-            GOAL_SAMPLEABLE_REGION = GOAL_REGION + 4,
+            void sampleGoal(State *state) const override;
+            unsigned int maxSampleCount() const override;
+            double distanceGoal(const State *state) const override;
 
-            /** \brief This bit is set if casting to goal state (ompl::base::GoalState) is possible */
-            GOAL_STATE = GOAL_SAMPLEABLE_REGION + 8,
+            std::optional<GoalSampleableRegionPtr> getFactorGoal(const std::string name) const;
 
-            /** \brief This bit is set if casting to goal states (ompl::base::GoalStates) is possible */
-            GOAL_STATES = GOAL_SAMPLEABLE_REGION + 16,
-
-            /** \brief This bit is set if casting to goal states (ompl::base::GoalLazySamples) is possible */
-            GOAL_LAZY_SAMPLES = GOAL_STATES + 32,
-
-            /** \brief This bit is set if casting to a factored goal (ompl::base::FactoredGoal) is possible */
-            FACTORED_GOAL = GOAL_STATES + 64
+        private:
+            std::unordered_map<std::string, GoalSampleableRegionPtr> goals_;
+            std::unordered_map<std::string, ompl::base::State*> tmp_goal_states_;
         };
     }
 }
 
 #endif
+

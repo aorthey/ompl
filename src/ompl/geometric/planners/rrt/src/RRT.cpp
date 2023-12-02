@@ -125,6 +125,8 @@ ompl::base::PlannerStatus ompl::geometric::RRT::solve(const base::PlannerTermina
     base::State *rstate = rmotion->state;
     base::State *xstate = si_->allocState();
 
+    std::pair<base::State*, double> lastValid;
+    lastValid.first = si_->allocState();
     while (!ptc)
     {
         /* sample random state (with goal biasing) */
@@ -145,8 +147,12 @@ ompl::base::PlannerStatus ompl::geometric::RRT::solve(const base::PlannerTermina
             dstate = xstate;
         }
 
-        if (si_->checkMotion(nmotion->state, dstate))
+        auto reached = si_->checkMotion(nmotion->state, dstate, lastValid);
+        if (reached || lastValid.second > 0.0f) //si_->checkMotion(nmotion->state, dstate, lastValid))
         {
+            if(!reached) {
+              dstate = lastValid.first;
+            }
             if (addIntermediateStates_)
             {
                 std::vector<base::State *> states;
@@ -191,6 +197,7 @@ ompl::base::PlannerStatus ompl::geometric::RRT::solve(const base::PlannerTermina
         }
     }
 
+    si_->freeState(lastValid.first);
     bool solved = false;
     bool approximate = false;
     if (solution == nullptr)

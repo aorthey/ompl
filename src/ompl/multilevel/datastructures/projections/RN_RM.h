@@ -51,6 +51,8 @@ namespace ompl
         public:
             Projection_RN_RM(base::StateSpacePtr BundleSpace, base::StateSpacePtr BaseSpace);
             Projection_RN_RM(base::StateSpacePtr BundleSpace, base::StateSpacePtr BaseSpace, std::vector<size_t> projected_dimensions);
+            Projection_RN_RM(const base::SpaceInformationPtr& bundleSi, const base::SpaceInformationPtr& baseSi);
+            Projection_RN_RM(const base::SpaceInformationPtr& bundleSi, const base::SpaceInformationPtr& baseSi, std::vector<size_t> projected_dimensions);
 
             ~Projection_RN_RM() override = default;
 

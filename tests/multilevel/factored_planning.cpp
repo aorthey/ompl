@@ -6,7 +6,7 @@
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/StateSpace.h>
-#include <ompl/multilevel/planners/factor/FactorRRT.h>
+#include <ompl/multilevel/planners/factor/FibrationRRT.h>
 #include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
 #include <ompl/multilevel/datastructures/projections/SE2_R2.h>
 #include <iostream>
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_OneLevelPlanning)
     ProblemDefinitionPtr pdef = std::make_shared<ProblemDefinition>(factor);
     pdef->setStartAndGoalStates(start, goal);
 
-    auto planner = std::make_shared<ompl::multilevel::FactorRRT>(factor);
+    auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(factor);
     planner->setProblemDefinition(pdef);
     planner->setup();
 
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_RigidBodyPlanning)
     ProblemDefinitionPtr pdef = std::make_shared<ProblemDefinition>(factor);
     pdef->setStartAndGoalStates(start, goal);
 
-    auto planner = std::make_shared<ompl::multilevel::FactorRRT>(factor);
+    auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(factor);
     planner->setProblemDefinition(pdef);
     planner->setSeed(0);
     planner->setup();

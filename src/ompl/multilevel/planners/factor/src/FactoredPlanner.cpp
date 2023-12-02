@@ -5,7 +5,7 @@
 using namespace ompl::multilevel;
 
 FactoredPlanner::FactoredPlanner(const FactoredSpaceInformationPtr& si, const std::vector<FactoredPlannerPtr>& children_planner) 
-  : RRTConnect(si)
+  : BaseTypePlanner(si)
 {
   setName("PlannerOn" + si->getName());
   if(!children_planner.empty()) 
@@ -16,7 +16,7 @@ FactoredPlanner::FactoredPlanner(const FactoredSpaceInformationPtr& si, const st
 
 ompl::base::PlannerStatus FactoredPlanner::solve(const ompl::base::PlannerTerminationCondition &ptc) 
 {
-  return RRTConnect::solve(ptc);
+  return BaseTypePlanner::solve(ptc);
 }
 
 void FactoredPlanner::setSeed(size_t seed) 
@@ -63,7 +63,7 @@ void FactoredPlanner::sampleFromPath(const std::vector<base::State *>& path_stat
       }
       distances.push_back(d);
   }
-  OMPL_ERROR("Path sampler reached end of method with lenght %f and random value %f", path_length, random_position_on_path);
+  OMPL_ERROR("Path sampler reached end of method with length %f and random value %f", path_length, random_position_on_path);
 }
 
 void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state) 
@@ -76,23 +76,34 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
     }
 
     //Path restriction sampling
-    // const auto path = pdef->getSolutionPath()->as<geometric::PathGeometric>();
-    // const std::vector<base::State *>& path_states = path->getStates();
-    // sampleFromPath(path_states, state);
+    if(rng_.uniform01() < 0.2) {
+      const auto path = pdef->getSolutionPath()->as<geometric::PathGeometric>();
+      const std::vector<base::State *>& path_states = path->getStates();
+      sampleFromPath(path_states, state);
+      return;
+    }
 
-    //Tree restriction sampling (vertex version)
-    const size_t N = tStart_->size() + tGoal_->size();
+    //Tree restriction sampling (vertex version). RRTConnect.
+    //const size_t N = tStart_->size() + tGoal_->size();
+    //const size_t R = rng_.uniformInt(0, N-1);
+
+    //std::vector<Motion*> data;
+    //if(R < tStart_->size()) 
+    //{
+    //  //sample from start tree
+    //  tStart_->list(data);
+    //  si_->copyState(state, data.at(R)->state);
+    //} else {
+    //  //sample from goal tree
+    //  tGoal_->list(data);
+    //  si_->copyState(state, data.at(R - tStart_->size())->state);
+    //}
+
+    //Tree restriction sampling (vertex version). RRT style
+    const size_t N = nn_->size();
     const size_t R = rng_.uniformInt(0, N-1);
 
     std::vector<Motion*> data;
-    if(R < tStart_->size()) 
-    {
-      //sample from start tree
-      tStart_->list(data);
-      si_->copyState(state, data.at(R)->state);
-    } else {
-      //sample from goal tree
-      tGoal_->list(data);
-      si_->copyState(state, data.at(R - tStart_->size())->state);
-    }
+    nn_->list(data);
+    si_->copyState(state, data.at(R)->state);
 }

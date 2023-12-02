@@ -1,7 +1,8 @@
-#ifndef OMPL_MULTILEVEL_PLANNERS_FACTOR_FACTORRRT_
-#define OMPL_MULTILEVEL_PLANNERS_FACTOR_FACTORRRT_
+#ifndef OMPL_MULTILEVEL_PLANNERS_FACTOR_FIBRATIONRRT_
+#define OMPL_MULTILEVEL_PLANNERS_FACTOR_FIBRATIONRRT_
 
 #include <ompl/base/Planner.h>
+#include <ompl/base/PlannerData.h>
 #include <ompl/util/RandomNumbers.h>
 #include <unordered_map>
 #include <ompl/multilevel/planners/factor/FactoredPlanner.h>
@@ -10,19 +11,19 @@ namespace ompl
 {
     namespace multilevel
     {
-        OMPL_CLASS_FORWARD(FactorRRT);
+        OMPL_CLASS_FORWARD(FibrationRRT);
         OMPL_CLASS_FORWARD(FactoredSpaceInformation);
         OMPL_CLASS_FORWARD(FactoredPlanner);
 
-        class FactorRRT : public base::Planner 
+        class FibrationRRT : public base::Planner 
         {
           public:
 
             using base::Planner::solve;
 
-            FactorRRT(const FactoredSpaceInformationPtr &si);
+            FibrationRRT(const FactoredSpaceInformationPtr &si);
 
-            ~FactorRRT() override;
+            ~FibrationRRT() override;
 
             base::PlannerStatus solve(const base::PlannerTerminationCondition &ptc) override;
 
@@ -31,6 +32,7 @@ namespace ompl
             void setSeed(size_t seed);
 
             void setProblemDefinition(const base::ProblemDefinitionPtr &pdef) override;
+            void getPlannerData(base::PlannerData &data) const override;
 
             const std::unordered_map<std::string, base::ProblemDefinitionPtr>& getProblemDefinitions() const;
             const std::unordered_map<std::string, base::PlannerStatus>& getPlannerStatus() const;
@@ -39,6 +41,11 @@ namespace ompl
 
             std::string getIterationsProperty() const;
             std::string getBestCostProperty() const;
+
+            void setRange(double range);
+            double getRange() const;
+
+            size_t numFactors() const;
 
           protected:
             void grow_(const FactoredSpaceInformationPtr& factor);
@@ -50,15 +57,15 @@ namespace ompl
             bool isSolved_(const FactoredSpaceInformationPtr& factor) const;
             bool allChildrenHaveSolutions_(const FactoredSpaceInformationPtr& factor) const;
 
-            void createProblemDefinition_(const FactoredSpaceInformationPtr& factor, const base::State* parent_start, const base::State* parent_goal);
+            void createProblemDefinition_(const FactoredSpaceInformationPtr& factor, const base::State* parent_start, const base::GoalPtr& parent_goal);
 
             std::vector<FactoredPlannerPtr> getChildrenPlanner_(const FactoredSpaceInformationPtr& factor) const;
 
           private:
             RNG rng_;
 
-            std::vector<std::pair<FactoredSpaceInformationPtr, base::State*>> start_states_;
-            std::vector<std::pair<FactoredSpaceInformationPtr, base::State*>> goal_states_;
+            // std::vector<std::pair<FactoredSpaceInformationPtr, base::State*>> start_states_;
+            // std::vector<std::pair<FactoredSpaceInformationPtr, base::State*>> goal_states_;
 
             std::optional<size_t> seed_;
 
@@ -73,6 +80,7 @@ namespace ompl
 
             unsigned int iterations_{0};
             float bestCost_;
+            std::optional<double> range_;
         };
 
     }

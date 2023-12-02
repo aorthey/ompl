@@ -4,6 +4,7 @@
 #include <ompl/base/StateSpace.h>
 #include <ompl/multilevel/datastructures/Projection.h>
 #include <ompl/multilevel/datastructures/projections/FiberedProjection.h>
+#include <ompl/util/RandomNumbers.h>
 
 using namespace ompl::multilevel;
 
@@ -147,6 +148,13 @@ bool FactoredSpaceInformation::childExists(const FactoredSpaceInformationPtr& fa
       });
 }
 
+bool FactoredSpaceInformation::hasChild(const std::string& name) const {
+  return std::any_of(children_.begin(), children_.end(),
+      [&name](const auto& child) {
+        return child->getName() == name;
+      });
+}
+
 bool FactoredSpaceInformation::projectionHasCorrectImage(const FactoredSpaceInformationPtr& child, const ProjectionPtr& projection) const
 {
     if(projection->getBaseDimension() != child->getStateDimension())
@@ -246,16 +254,63 @@ void FactoredSpaceInformation::lift(const std::unordered_map<std::string, base::
     return;
   }
 
-  OMPL_INFORM("Lifting state");
   for(const auto& name_and_state: childStates_) {
     const auto& name = name_and_state.first;
     const auto& childState = name_and_state.second;
     const auto& child = getChild(name);
     const auto& projection = std::static_pointer_cast<FiberedProjection>(child->getProjection());
-    child->printState(childState);
     projection->inclusionMap(childState, state);
   }
-  printState(state);
+}
+
+/** \brief project: Map a state to its children factors store the result in childStates */
+void FactoredSpaceInformation::project(const base::State* state, const std::unordered_map<std::string, base::State*>& childStates) const {
+  if(!hasChildren()) {
+    return;
+  }
+  if(children_.size() == 1) {
+    if(childStates.size() != 1) {
+      OMPL_ERROR("Number of child states is %d, which is different from children (%d).", childStates.size(), children_.size());
+      throw "InvalidStates";
+    }
+    const auto& child = children_.front();
+    const auto& projection = child->getProjection();
+
+    const auto& name = childStates.begin()->first;
+    if(name != child->getName()) {
+      OMPL_ERROR("Name of child state is %s, which is different from child (%s).", name.c_str(), child->getName().c_str());
+      throw "InvalidChildName";
+    }
+    const auto& childState = childStates.begin()->second;
+    projection->project(state, childState);
+    return;
+  }
+
+  for(const auto& name_and_state: childStates) {
+    const auto& name = name_and_state.first;
+    const auto& childState = name_and_state.second;
+    const auto& child = getChild(name);
+    const auto& projection = child->getProjection();
+    projection->project(state, childState);
+  }
+}
+
+std::unordered_map<std::string, ompl::base::State*> FactoredSpaceInformation::allocChildStates() const {
+  std::unordered_map<std::string, ompl::base::State*> childStates;
+  for(const auto& child : children_) {
+    childStates.insert({child->getName(), child->allocState()});
+  }
+  return childStates;
+}
+
+void FactoredSpaceInformation::freeChildStates(std::unordered_map<std::string, ompl::base::State*>& childStates) const {
+  for(const auto& name_and_state: childStates) {
+    const auto& name = name_and_state.first;
+    const auto& childState = name_and_state.second;
+    const auto& child = getChild(name);
+    child->freeState(childState);
+  }
+  childStates.clear();
 }
 
 void FactoredSpaceInformation::printSettings(std::ostream &out) const
@@ -283,4 +338,133 @@ void FactoredSpaceInformation::printSettings(std::ostream &out) const
       out << "no parents";
     }
     out << "." << std::endl;
+}
+
+/** \brief lift: Map states from all leaf factors to this factor space and store the result in state */
+void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::string, ompl::base::State*>& leaf_node_states, ompl::base::State* state) {
+  typedef std::pair<std::string, ompl::base::State*> NodeState;
+  //////////////////////////////////////////////////////////////////////////////////
+  //(1) Check that all leaf nodes are covered
+  //////////////////////////////////////////////////////////////////////////////////
+  auto leaf_factors = getLeafFactors();
+  for(const auto& leaf : leaf_factors) {
+    const auto& name = leaf->getName();
+    auto it = leaf_node_states.find(name);
+    if(it == leaf_node_states.end()) {
+      OMPL_ERROR("Could not find leaf node %s in states. Please specify all leaf node states.", name.c_str());
+      throw "LeafNotFoundInState";
+    }
+  }
+
+  for(const auto& leaf_node : leaf_node_states) {
+    const auto& name = leaf_node.first;
+    auto it = std::find_if(leaf_factors.begin(), leaf_factors.end(), 
+        [&name](const FactoredSpaceInformationPtr& factor) {
+          return factor->getName() == name;
+        });
+    if(it == leaf_factors.end()) {
+      OMPL_ERROR("Could not find leaf node %s in factors.", name.c_str());
+      throw "LeafNotFoundInState";
+    }
+  }
+  //////////////////////////////////////////////////////////////////////////////////
+  //(2) Put all leaf node states into a queue, and try to project them upwards,
+  //thereby merging them
+  //////////////////////////////////////////////////////////////////////////////////
+  const auto all_factors = getAllFactors();
+
+  std::vector<NodeState> node_states;
+  for(const auto& leaf_node_state : leaf_node_states) {
+    // OMPL_WARN("Add leaf node %s", leaf_node_state.first.c_str());
+    node_states.push_back(std::make_pair(leaf_node_state.first, leaf_node_state.second));
+  }
+
+  ompl::RNG rng(0);
+  while(true) {
+    int next_node_state_index = rng.uniformInt(0, node_states.size()-1);
+    auto node_state = node_states.at(next_node_state_index);
+    auto name = node_state.first;
+
+    // OMPL_INFORM("Select node %s", name.c_str());
+
+    auto current_state = node_state.second;
+
+    //////////////////////////////////////////////////////////////////////////////////
+    //Get factor to node
+    //////////////////////////////////////////////////////////////////////////////////
+    auto iterator_factor = std::find_if(all_factors.begin(), all_factors.end(), 
+        [&name](const FactoredSpaceInformationPtr& factor) {
+          return factor->getName() == name;
+        });
+    if(iterator_factor == all_factors.end()) {
+      OMPL_ERROR("Could not find leaf node %s in factors.", name.c_str());
+      throw "LeafNotFoundInState";
+    }
+    const auto& current_factor = *iterator_factor;
+
+    //////////////////////////////////////////////////////////////////////////////////
+    //Check if we are the root node. In that case, just copy the state and
+    //return. Otherwise create a new state and continue.
+    //////////////////////////////////////////////////////////////////////////////////
+    auto parent = current_factor->getParent();
+    if(parent == nullptr) {
+      //Ensure that root node and current name match up
+      if(name != current_factor->getName()) {
+        OMPL_ERROR("Factor %s has no parent.", name.c_str());
+        throw "NoParent";
+      }
+      current_factor->copyState(state, current_state);
+      current_factor->freeState(current_state);
+      return;
+    }
+
+    auto next_state = parent->allocState();
+    auto child_states = parent->allocChildStates();
+    //////////////////////////////////////////////////////////////////////////////////
+    //Extract all states which belong to the children of the parent node
+    //////////////////////////////////////////////////////////////////////////////////
+    bool liftable = true;
+    for(const auto& child : parent->getChildren()) {
+      auto name = child->getName();
+
+      auto it = std::find_if(node_states.begin(), node_states.end(), [&name](const NodeState& node_state) {
+            return node_state.first == name;
+          }
+      );
+      if(it == node_states.end()) {
+        // OMPL_INFORM("Unliftable because of space %s. Node states contain %d states.", name.c_str(), node_states.size());
+        // for(const auto& node_state : node_states) {
+        //   std::cout << node_state.first << std::endl;
+        // }
+        liftable = false;
+        break;
+      }
+      auto cit = child_states.find(name);
+      if(cit == child_states.end()) {
+        OMPL_ERROR("Could not find child node %s in states.", name.c_str());
+        throw "ChildNotNotFoundInState";
+      }
+      child->copyState(cit->second, it->second);
+    }
+    if(!liftable) {
+      continue;
+    }
+    parent->lift(child_states, next_state);
+
+    //////////////////////////////////////////////////////////////////////////////////
+    //Remove lifted states from vector, and add new one to node_states
+    //////////////////////////////////////////////////////////////////////////////////
+    for(const auto& child : parent->getChildren()) {
+      auto name = child->getName();
+      auto new_end = std::remove_if(node_states.begin(), node_states.end(),
+                              [&name](const NodeState& node_state)
+                              { 
+                                return node_state.first == name;
+                              });
+      node_states.erase(new_end, node_states.end());
+    }
+    node_states.push_back(std::make_pair(parent->getName(), next_state));
+    // OMPL_INFORM("Add node %s", parent->getName().c_str());
+    parent->freeChildStates(child_states);
+  }
 }

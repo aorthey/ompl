@@ -38,6 +38,7 @@
 
 #ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_BUNDLE_PROJECTION_
 #define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_BUNDLE_PROJECTION_
+
 #include <ompl/base/State.h>
 #include <ompl/base/StateSpace.h>
 #include <ompl/multilevel/datastructures/ProjectionTypes.h>
@@ -49,6 +50,7 @@ namespace ompl
         /// @cond IGNORE
         /** \brief Forward declaration of ompl::base::StateSpace */
         OMPL_CLASS_FORWARD(StateSpace);
+        OMPL_CLASS_FORWARD(SpaceInformation);
         /// @endcond
     }
     namespace multilevel
@@ -64,7 +66,8 @@ namespace ompl
         {
         public:
             Projection() = delete;
-            Projection(base::StateSpacePtr bundleSpace, base::StateSpacePtr baseSpace);
+            explicit Projection(base::StateSpacePtr bundleSpace, base::StateSpacePtr baseSpace);
+            explicit Projection(const base::SpaceInformationPtr& bundleSi, const base::SpaceInformationPtr& baseSi);
 
             virtual ~Projection() = default;
 

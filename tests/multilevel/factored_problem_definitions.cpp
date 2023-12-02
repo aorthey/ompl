@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_CorrectProjectionToProblemDefiniti
     ScopedState<> goal = CreateState(space_A, 0.91f, 0.01);
     pdef->setStartAndGoalStates(start, goal);
 
-    auto planner = std::make_shared<ompl::multilevel::FactorRRT>(A);
+    auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(A);
     planner->setProblemDefinition(pdef);
     planner->setup();
 

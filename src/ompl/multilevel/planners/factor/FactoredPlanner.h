@@ -5,6 +5,8 @@
 #include "ompl/base/SpaceInformation.h"
 #include "ompl/util/ClassForward.h"
 #include "ompl/geometric/planners/rrt/RRTConnect.h"
+#include "ompl/geometric/planners/rrt/RRT.h"
+#include "ompl/geometric/planners/rlrt/RLRT.h"
 
 #include <optional>
 
@@ -14,7 +16,9 @@ namespace ompl {
         OMPL_CLASS_FORWARD(FactoredPlanner);
         OMPL_CLASS_FORWARD(FactoredSpaceInformation);
 
-        class FactoredPlanner : public ompl::geometric::RRTConnect {
+        typedef ompl::geometric::RRT BaseTypePlanner;
+
+        class FactoredPlanner : public BaseTypePlanner {
           public:
             /** \brief Constructor */
             FactoredPlanner(const FactoredSpaceInformationPtr& si, const std::vector<FactoredPlannerPtr>& children_planner = {});

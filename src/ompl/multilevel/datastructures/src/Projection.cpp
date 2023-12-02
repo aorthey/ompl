@@ -37,6 +37,7 @@
 /* Author: Andreas Orthey */
 
 #include <ompl/multilevel/datastructures/Projection.h>
+#include <ompl/base/SpaceInformation.h>
 #include <ompl/util/Exception.h>
 
 using namespace ompl::base;
@@ -44,6 +45,10 @@ using namespace ompl::multilevel;
 
 Projection::Projection(ompl::base::StateSpacePtr bundleSpace, ompl::base::StateSpacePtr baseSpace)
   : bundleSpace_(bundleSpace), baseSpace_(baseSpace)
+{
+}
+Projection::Projection(const base::SpaceInformationPtr& bundleSi, const base::SpaceInformationPtr& baseSi)
+  : Projection(bundleSi->getStateSpace(), baseSi->getStateSpace()) 
 {
 }
 

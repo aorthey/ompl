@@ -7,7 +7,7 @@
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/StateSpace.h>
 #include <ompl/util/RandomNumbers.h>
-#include <ompl/multilevel/planners/factor/FactorRRT.h>
+#include <ompl/multilevel/planners/factor/FibrationRRT.h>
 #include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
 #include <ompl/multilevel/datastructures/projections/RN_RM.h>
 
@@ -168,7 +168,7 @@ BOOST_AUTO_TEST_CASE(FactoredMultiRobot_ComponentSpacePlanning)
     ProblemDefinitionPtr pdef = std::make_shared<ProblemDefinition>(factor);
     pdef->setStartAndGoalStates(start, goal);
 
-    auto planner = std::make_shared<ompl::multilevel::FactorRRT>(factor);
+    auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(factor);
     planner->setProblemDefinition(pdef);
     planner->setup();
     planner->setSeed(kDefaultSeed);
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE(FactoredMultiRobot_DecompositionBasedPlanning)
     ProblemDefinitionPtr pdef = std::make_shared<ProblemDefinition>(factor);
     pdef->setStartAndGoalStates(start, goal);
 
-    auto planner = std::make_shared<ompl::multilevel::FactorRRT>(factor);
+    auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(factor);
     planner->setProblemDefinition(pdef);
     planner->setup();
     planner->setSeed(kDefaultSeed);
@@ -218,7 +218,7 @@ BOOST_AUTO_TEST_CASE(FactoredMultiRobot_PrioritizedBasedPlanning)
     ProblemDefinitionPtr pdef = std::make_shared<ProblemDefinition>(factor);
     pdef->setStartAndGoalStates(start, goal);
 
-    auto planner = std::make_shared<ompl::multilevel::FactorRRT>(factor);
+    auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(factor);
     planner->setSeed(kDefaultSeed);
     planner->setProblemDefinition(pdef);
     planner->setup();

@@ -90,14 +90,23 @@ namespace ompl
             const FactoredSpaceInformationPtr& getChild(const std::string& name) const;
             bool hasChildren() const;
             bool childExists(const FactoredSpaceInformationPtr& factor) const;
+            bool hasChild(const std::string& name) const;
 
             std::vector<FactoredSpaceInformationPtr> getLeafFactors();
             std::vector<FactoredSpaceInformationPtr> getAllFactors();
 
-            /** \brief lift: Map states from children factors to this factor and
-             * store the result in state
-             */
+            /** \brief alloc/free child states */
+            std::unordered_map<std::string, base::State*> allocChildStates() const;
+            void freeChildStates(std::unordered_map<std::string, base::State*>& childStates) const;
+
+            /** \brief lift: Map states from children factors and store the result in state */
             void lift(const std::unordered_map<std::string, base::State*>& childStates_, base::State* state) const;
+
+            /** \brief project: Map a state to its children factors store the result in childStates */
+            void project(const base::State* state, const std::unordered_map<std::string, base::State*>& childStates) const;
+
+            /** \brief lift: Map states from all leaf factors to this factor space and store the result in state */
+            void liftLeafStates(const std::unordered_map<std::string, ompl::base::State*>& leaf_node_states, ompl::base::State*);
 
             bool isEquivalentTo(const FactoredSpaceInformationPtr& rhs) const;
 

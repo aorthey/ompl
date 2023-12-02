@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_MultiLevelConnection)
     ScopedState<> goal = CreateState(space_A, 0.91f, 0.01);
     pdef->setStartAndGoalStates(start, goal);
 
-    auto planner = std::make_shared<ompl::multilevel::FactorRRT>(A);
+    auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(A);
     planner->setProblemDefinition(pdef);
     planner->setup();
 
@@ -231,7 +231,7 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_DecompositionConnection)
     ScopedState<> goal = CreateState(space_A, 0.91f, 0.01);
     pdef->setStartAndGoalStates(start, goal);
 
-    auto planner = std::make_shared<ompl::multilevel::FactorRRT>(A);
+    auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(A);
     planner->setSeed(0);
     planner->setProblemDefinition(pdef);
     planner->setup();
@@ -291,7 +291,7 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_FactorTree)
     ScopedState<> goal = CreateState(space_A, 0.91f, 0.01);
     pdef->setStartAndGoalStates(start, goal);
 
-    auto planner = std::make_shared<ompl::multilevel::FactorRRT>(A);
+    auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(A);
     planner->setSeed(0);
     planner->setProblemDefinition(pdef);
     planner->setup();

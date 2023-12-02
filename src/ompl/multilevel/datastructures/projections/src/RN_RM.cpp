@@ -36,19 +36,71 @@
 
 /* Author: Andreas Orthey */
 
-#include <ompl/multilevel/datastructures/projections/RN_RM.h>
+#include <ompl/base/SpaceInformation.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 
 #include <ranges>
 #include <numeric>
 #include <boost/iterator/counting_iterator.hpp>
 
+#include <ompl/multilevel/datastructures/projections/RN_RM.h>
+
 using namespace ompl::multilevel;
 
+Projection_RN_RM::Projection_RN_RM(const base::SpaceInformationPtr& bundleSi, const base::SpaceInformationPtr& baseSi)
+  : Projection_RN_RM(bundleSi->getStateSpace(), baseSi->getStateSpace()) 
+{
+}
+
+Projection_RN_RM::Projection_RN_RM(const base::SpaceInformationPtr& bundleSi, const base::SpaceInformationPtr& baseSi, std::vector<size_t> projected_dimensions)
+  : Projection_RN_RM(bundleSi->getStateSpace(), baseSi->getStateSpace(), projected_dimensions) 
+{
+}
 Projection_RN_RM::Projection_RN_RM(ompl::base::StateSpacePtr BundleSpace, ompl::base::StateSpacePtr BaseSpace)
   : Projection_RN_RM(BundleSpace, BaseSpace, 
     std::vector<size_t>(boost::counting_iterator<size_t>(0), boost::counting_iterator<size_t>(BaseSpace->getDimension())))
 {
+}
+Projection_RN_RM::Projection_RN_RM(ompl::base::StateSpacePtr BundleSpace, ompl::base::StateSpacePtr BaseSpace, std::vector<size_t> projected_dimensions)
+  : BaseT(BundleSpace, BaseSpace), projected_dimensions_(projected_dimensions)
+{
+    if(projected_dimensions.size() != BaseSpace->getDimension()) {
+      OMPL_ERROR("For projection from %s to %s, you need to specify how each dimension \
+          is mapped to the bundle space. However, you only specified %d dimensions out of %d.", 
+       BundleSpace->getName().c_str(), BaseSpace->getName().c_str(),
+       projected_dimensions.size(), BaseSpace->getDimension());
+      throw "InvalidDimensionError";
+    }
+    for(const auto dimension : projected_dimensions) {
+      if(dimension > BundleSpace->getDimension() - 1) {
+        OMPL_ERROR("For projection from %s to %s, you specified a dimension mapping to value %d, \
+            which is outside the dimensions of the bundle space (%d).",
+         BundleSpace->getName().c_str(), BaseSpace->getName().c_str(),
+         dimension, BundleSpace->getDimension());
+        throw "InvalidDimensionError";
+      }
+    }
+
+    size_t ctr_base = 0;
+    size_t ctr_fiber = 0;
+    for (unsigned int k = 0; k < getDimension(); k++) 
+    {
+      if(isProjectedDimension(k)) {
+        map_projected_dimension_to_base_.insert({k, ctr_base});
+        ctr_base++;
+      } else {
+        non_projected_dimensions_.push_back(k);
+        map_non_projected_dimension_to_fiber_.insert({k, ctr_fiber});
+        ctr_fiber++;
+      }
+    }
+    auto total_size = map_projected_dimension_to_base_.size() + map_non_projected_dimension_to_fiber_.size();
+    if(total_size != getDimension()) {
+      OMPL_ERROR("Dimension error: Base has %d, fiber has %d, but dimension is %d.", map_projected_dimension_to_base_.size(),
+          map_non_projected_dimension_to_fiber_.size(), getDimension());
+      throw "InvalidDimensionError";
+    }
+    setType(PROJECTION_RN_RM);
 }
 
 std::vector<size_t> Projection_RN_RM::getInclusionIndices() const 
@@ -74,29 +126,6 @@ void Projection_RN_RM::inclusionMap(const ompl::base::State *xBase, ompl::base::
   }
 }
 
-Projection_RN_RM::Projection_RN_RM(ompl::base::StateSpacePtr BundleSpace, ompl::base::StateSpacePtr BaseSpace, std::vector<size_t> projected_dimensions)
-  : BaseT(BundleSpace, BaseSpace), projected_dimensions_(projected_dimensions)
-{
-    size_t ctr_base = 0;
-    size_t ctr_fiber = 0;
-    for (unsigned int k = 0; k < getDimension(); k++) 
-    {
-      if(isProjectedDimension(k)) {
-        map_projected_dimension_to_base_.insert({k, ctr_base});
-        ctr_base++;
-      } else {
-        non_projected_dimensions_.push_back(k);
-        map_non_projected_dimension_to_fiber_.insert({k, ctr_fiber});
-        ctr_fiber++;
-      }
-    }
-    auto total_size = map_projected_dimension_to_base_.size() + map_non_projected_dimension_to_fiber_.size();
-    if(total_size != getDimension()) {
-      OMPL_ERROR("Dimension error: Base has %d, fiber has %d, but dimension is %d.", map_projected_dimension_to_base_.size(),
-          map_non_projected_dimension_to_fiber_.size(), getDimension());
-    }
-    setType(PROJECTION_RN_RM);
-}
 
 bool Projection_RN_RM::isProjectedDimension(size_t input) const 
 {
