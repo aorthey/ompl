@@ -1,7 +1,7 @@
 #include <ompl/base/terminationconditions/IterationTerminationCondition.h>
 #include <ompl/util/RandomNumbers.h>
 #include <ompl/geometric/PathSimplifier.h>
-#include <ompl/multilevel/planners/factor/FactorRRT.h>
+#include <ompl/multilevel/planners/factor/FibrationRRT.h>
 
 #include <iostream>
 #include <fstream>
@@ -32,7 +32,7 @@ int main()
   ProblemDefinitionPtr pdef = std::make_shared<ProblemDefinition>(factor);
   pdef->setStartAndGoalStates(start, goal);
 
-  auto planner = std::make_shared<ompl::multilevel::FactorRRT>(factor);
+  auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(factor);
   planner->setProblemDefinition(pdef);
   planner->setup();
   planner->setSeed(kDefaultSeed);

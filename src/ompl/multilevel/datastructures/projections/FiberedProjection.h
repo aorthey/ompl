@@ -36,12 +36,12 @@
 
 /* Author: Andreas Orthey */
 
-#ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_BUNDLE_COMPONENT_
-#define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_BUNDLE_COMPONENT_
+#ifndef OMPL_MULTILEVEL_DATASTRUCTURES_PROJECTIONS_FIBEREDPROJECTION__
+#define OMPL_MULTILEVEL_DATASTRUCTURES_PROJECTIONS_FIBEREDPROJECTION__
 #include <ompl/base/State.h>
 #include <ompl/base/StateSpaceTypes.h>
 #include <ompl/multilevel/datastructures/ProjectionTypes.h>
-#include <ompl/multilevel/datastructures/Projection.h>
+#include <ompl/multilevel/datastructures/projections/InclusionProjection.h>
 
 namespace ompl
 {
@@ -58,7 +58,7 @@ namespace ompl
     {
         /* \brief A bundle projection with an explicit fiber space representation
          * which can be explicitly sampled to lift states */
-        class FiberedProjection : public Projection
+        class FiberedProjection : public InclusionProjection
         {
         public:
             FiberedProjection(base::StateSpacePtr bundleSpace, base::StateSpacePtr baseSpace);
@@ -73,14 +73,6 @@ namespace ompl
 
             /* \brief Project bundle space onto fiber space */
             virtual void projectFiber(const ompl::base::State *xBundle, ompl::base::State *xFiber) const = 0;
-
-            /* \brief Compute all indices which contain values which are
-             * kept during projection */
-            virtual std::vector<size_t> getInclusionIndices() const;
-
-            /* \brief Map base state into bundle space, but keep non-inclusion
-             * indices constant (xBundle is only changed partially) */
-            virtual void inclusionMap(const ompl::base::State *xBase, ompl::base::State *xBundle) const;
 
             /* \brief Get explicit fiber space representation */
             virtual ompl::base::StateSpacePtr getFiberSpace() const;

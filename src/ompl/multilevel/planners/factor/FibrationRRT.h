@@ -36,6 +36,7 @@ namespace ompl
 
             const std::unordered_map<std::string, base::ProblemDefinitionPtr>& getProblemDefinitions() const;
             const std::unordered_map<std::string, base::PlannerStatus>& getPlannerStatus() const;
+            base::ProblemDefinitionPtr getProblemDefinition(const std::string& name) const;
 
             const FactoredSpaceInformationPtr& getFactoredSpaceInformation() const;
 
@@ -56,6 +57,7 @@ namespace ompl
             bool isActive_(const FactoredSpaceInformationPtr& factor) const;
             bool isSolved_(const FactoredSpaceInformationPtr& factor) const;
             bool allChildrenHaveSolutions_(const FactoredSpaceInformationPtr& factor) const;
+            bool hasValidProblemDefinition_(const FactoredSpaceInformationPtr& factor) const;
 
             void createProblemDefinition_(const FactoredSpaceInformationPtr& factor, const base::State* parent_start, const base::GoalPtr& parent_goal);
 

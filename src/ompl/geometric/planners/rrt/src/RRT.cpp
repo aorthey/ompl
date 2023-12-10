@@ -148,7 +148,7 @@ ompl::base::PlannerStatus ompl::geometric::RRT::solve(const base::PlannerTermina
         }
 
         auto reached = si_->checkMotion(nmotion->state, dstate, lastValid);
-        if (reached || lastValid.second > 0.0f) //si_->checkMotion(nmotion->state, dstate, lastValid))
+        if (reached || lastValid.second > 0.0) //si_->checkMotion(nmotion->state, dstate, lastValid))
         {
             if(!reached) {
               dstate = lastValid.first;

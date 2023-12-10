@@ -4,7 +4,7 @@
 #include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/base/StateSpace.h>
-#include <ompl/multilevel/planners/factor/FactorRRT.h>
+#include <ompl/multilevel/planners/factor/FibrationRRT.h>
 #include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
 #include <ompl/multilevel/datastructures/Projection.h>
 #include <ompl/multilevel/datastructures/projections/SE2_R2.h>
@@ -150,7 +150,7 @@ int main()
     // #########################################################################
     // ## Invoke planner
     // #########################################################################
-    auto planner = std::make_shared<ompl::multilevel::FactorRRT>(factor);
+    auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(factor);
     planner->setProblemDefinition(pdef);
     planner->setup();
 

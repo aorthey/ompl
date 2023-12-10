@@ -3,12 +3,11 @@
 #include <ompl/multilevel/datastructures/projections/FiberedProjection.h>
 #include <ompl/base/StateSpace.h>
 #include <ompl/base/SpaceInformation.h>
-#include <boost/iterator/counting_iterator.hpp>
 
 using namespace ompl::multilevel;
 
 FiberedProjection::FiberedProjection(ompl::base::StateSpacePtr bundleSpace, ompl::base::StateSpacePtr baseSpace)
-  : Projection(bundleSpace, baseSpace)
+  : InclusionProjection(bundleSpace, baseSpace)
 {
 }
 
@@ -26,22 +25,6 @@ ompl::base::StateSpacePtr FiberedProjection::getFiberSpace() const
 bool FiberedProjection::isFibered() const
 {
     return true;
-}
-
-std::vector<size_t> FiberedProjection::getInclusionIndices() const 
-{
-    return std::vector<size_t>(boost::counting_iterator<size_t>(0), boost::counting_iterator<size_t>(getBaseDimension()));
-}
-
-void FiberedProjection::inclusionMap(const ompl::base::State *xBase, ompl::base::State *xBundle) const 
-{
-  std::vector<size_t> indices = getInclusionIndices();
-  for(const auto& index : indices) 
-  {
-    double* value = getBundle()->getValueAddressAtIndex(xBundle, index);
-    const double* baseValue = getBase()->getValueAddressAtIndex(xBase, index);
-    *value = *baseValue;
-  }
 }
 
 unsigned int FiberedProjection::getFiberDimension() const

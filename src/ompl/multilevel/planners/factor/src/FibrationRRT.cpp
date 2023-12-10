@@ -3,6 +3,7 @@
 #include <ompl/base/StateSpace.h>
 #include <ompl/base/goals/GoalState.h>
 #include <ompl/base/goals/FactoredGoal.h>
+#include <ompl/geometric/PathSimplifier.h>
 #include "ompl/multilevel/datastructures/FactoredSpaceInformation.h"
 #include "ompl/multilevel/datastructures/Projection.h"
 #include <ompl/multilevel/planners/factor/FactoredPlanner.h>
@@ -49,6 +50,44 @@ const std::unordered_map<std::string, ompl::base::PlannerStatus>& FibrationRRT::
   return planner_status_per_factor_;
 }
 
+ompl::base::ProblemDefinitionPtr FibrationRRT::getProblemDefinition(const std::string& name) const {
+  auto pdef_iterator = problem_definitions_per_factor_.find(name);
+  if(pdef_iterator == problem_definitions_per_factor_.end()) {
+    OMPL_ERROR("Could not get problem definition for factor %s", name.c_str());
+    throw "NotFound";
+  }
+  return pdef_iterator->second;
+}
+
+bool FibrationRRT::hasValidProblemDefinition_(const FactoredSpaceInformationPtr& factor) const {
+  auto pdef_iterator = problem_definitions_per_factor_.find(factor->getName());
+  if(pdef_iterator == problem_definitions_per_factor_.end()) {
+    OMPL_ERROR("Could not get problem definition for factor %s", factor->getName().c_str());
+    return false;
+  }
+  const auto& pdef = pdef_iterator->second;
+  if(pdef->getStartStateCount() <= 0) {
+    return false;
+  }
+  bool has_valid_start = false;
+  if(factor->getStateValidityChecker() == nullptr) {
+    OMPL_ERROR("No valid StateValidityCheckerPtr set in factor space %s.", factor->getName().c_str());
+    return false;
+  }
+  for(size_t k =0; k < pdef->getStartStateCount(); k++) {
+    auto state = pdef->getStartState(k);
+    if(factor->satisfiesBounds(state) && factor->isValid(state)) {
+      has_valid_start = true;
+    }
+  }
+  if(!has_valid_start) {
+    OMPL_ERROR("No valid start state for factor %s", factor->getName().c_str());
+    return false;
+  }
+  OMPL_INFORM("Valid problem definition for factor %s", factor->getName().c_str());
+  return true;
+}
+
 bool FibrationRRT::allChildrenHaveSolutions_(const FactoredSpaceInformationPtr& factor) const {
   if(!factor->hasChildren()) {
     return true;
@@ -81,12 +120,6 @@ const FactoredSpaceInformationPtr& FibrationRRT::selectFactor_() {
 
 void FibrationRRT::clear() {
   Planner::clear();
-  // for(const auto& state : start_states_) {
-  //   state.first->freeState(state.second);
-  // }
-  // for(const auto& state : goal_states_) {
-  //   state.first->freeState(state.second);
-  // }
   iterations_ = 0;
 }
 
@@ -222,19 +255,6 @@ void FibrationRRT::setProblemDefinition(const base::ProblemDefinitionPtr &pdef) 
   const base::State* start = pdef->getStartState(0);
   const auto& goal_region = pdef->getGoal();
 
-  // std::stringstream ss_start;
-  // root->printState(start, ss_start);
-
-  // if(type == base::GoalType::GOAL_STATE) {
-  //   const base::State* goal = goal_region->as<base::GoalState>()->getState();
-  //   std::stringstream ss_start, ss_goal;
-  //   root->printState(goal, ss_goal);
-  //   OMPL_INFORM("Project states \n Start %s Goal %s.", ss_start.str().c_str(), ss_goal.str().c_str());
-  // }
-  // if(type == base::GoalType::FACTORED_GOAL) {
-  //   OMPL_INFORM("Project states \n Start %s and factored goal.", ss_start.str().c_str());
-  // }
-
   for(const auto& child : root->getChildren()) {
     createProblemDefinition_(child, start, goal_region);
   }
@@ -299,36 +319,6 @@ void FibrationRRT::createProblemDefinition_(const FactoredSpaceInformationPtr& f
   }
 }
 
-// void FibrationRRT::createProblemDefinition_(const FactoredSpaceInformationPtr& factor, const base::State* parent_start, const base::State* parent_goal) {
-//   base::ProblemDefinitionPtr pdef = std::make_shared<base::ProblemDefinition>(factor);
-
-//   base::State* start = factor->allocState();
-//   base::State* goal = factor->allocState();
-
-//   const auto& projection = factor->getProjection();
-
-//   projection->project(parent_start, start);
-//   projection->project(parent_goal, goal);
-
-//   std::stringstream ss_start, ss_goal;
-//   factor->printState(start, ss_start);
-//   factor->printState(goal, ss_goal);
-//   OMPL_INFORM("Project states onto factor %s \n Start %s Goal %s", 
-//       factor->getName().c_str(), ss_start.str().c_str(), ss_goal.str().c_str());
-
-//   pdef->addStartState(start);
-//   pdef->setGoalState(goal);
-
-//   // start_states_.push_back({factor, start});
-//   // goal_states_.push_back({factor, goal});
-
-//   problem_definitions_per_factor_[factor->getName()] = pdef;
-
-//   for(const auto& child : factor->getChildren()) {
-//     createProblemDefinition_(child, start, goal);
-//   }
-// }
-
 std::string FibrationRRT::getIterationsProperty() const {
   return std::to_string(iterations_);
 }
@@ -344,6 +334,9 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
     for(const auto& factor: active_factors_) {
       is_active_.insert({factor->getName(), true});
       is_solved_.insert({factor->getName(), false});
+      if(!hasValidProblemDefinition_(factor)) {
+        return base::PlannerStatus::INVALID_START;
+      }
     }
     OMPL_DEBUG("Solving FactoredSpaceInformation using %d active factors.", active_factors_.size());
     
@@ -368,6 +361,13 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
             OMPL_DEBUG(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
             OMPL_DEBUG(" >>> Solved factor %s.", selectedFactor->getName().c_str());
             OMPL_DEBUG(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
+            //Postoptimize path
+            auto pdef = getProblemDefinition(selectedFactor->getName());
+            auto simplifier = std::make_shared<ompl::geometric::PathSimplifier>(selectedFactor, pdef->getGoal());
+            auto path = pdef->getSolutionPath();
+            ompl::geometric::PathGeometric &pgeo = *static_cast<ompl::geometric::PathGeometric *>(path.get());
+            simplifier->simplifyMax(pgeo);
+
             if(!selectedFactor->hasParent()) {
               const auto& name = selectedFactor->getName();
               OMPL_DEBUG(" >>>>>> Found solution on root factor %s", name.c_str());
@@ -386,12 +386,19 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
             active_factors_.push_back(parent);
             is_active_.insert({parent->getName(), true});
             is_solved_.insert({parent->getName(), false});
+            if(!hasValidProblemDefinition_(parent)) {
+              return base::PlannerStatus::INVALID_START;
+            }
           }
         }
     }
     if(pdef_->hasExactSolution()) {
-      OMPL_DEBUG("Found exact solution");
       planner_status_ = base::PlannerStatus::StatusType::EXACT_SOLUTION;
+      const auto pgeo = dynamic_pointer_cast<ompl::geometric::PathGeometric>(pdef_->getSolutionPath());
+      if(pgeo) {
+        OMPL_DEBUG("Found exact solution of length %f with %d waypoints.", pgeo->length(), pgeo->getStateCount());
+      }
+
     }
     return planner_status_;
 }

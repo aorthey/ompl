@@ -175,7 +175,7 @@ bool FactoredSpaceInformation::projectionHasCorrectPreimage(const ProjectionPtr&
     return projection->getBundle()->getName() == this->getName();
 }
 
-bool FactoredSpaceInformation::addChild(FactoredSpaceInformationPtr child, ProjectionPtr projection) {
+bool FactoredSpaceInformation::addChild(FactoredSpaceInformationPtr child, ProjectionPtr projection, bool compute_fiber_space) {
 
   if(this->isEquivalentTo(child)) 
   {
@@ -217,7 +217,7 @@ bool FactoredSpaceInformation::addChild(FactoredSpaceInformationPtr child, Proje
   child->setParent(shared_from_this());
   children_.push_back(child);
 
-  if(projection->isFibered()) {
+  if(compute_fiber_space && projection->isFibered()) {
     OMPL_INFORM("Create fiber space for projection from %s to %s", getName().c_str(), child->getName().c_str());
     std::static_pointer_cast<FiberedProjection>(projection)->makeFiberSpace();
   }
@@ -385,8 +385,6 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
     auto node_state = node_states.at(next_node_state_index);
     auto name = node_state.first;
 
-    // OMPL_INFORM("Select node %s", name.c_str());
-
     auto current_state = node_state.second;
 
     //////////////////////////////////////////////////////////////////////////////////
@@ -464,7 +462,6 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
       node_states.erase(new_end, node_states.end());
     }
     node_states.push_back(std::make_pair(parent->getName(), next_state));
-    // OMPL_INFORM("Add node %s", parent->getName().c_str());
     parent->freeChildStates(child_states);
   }
 }

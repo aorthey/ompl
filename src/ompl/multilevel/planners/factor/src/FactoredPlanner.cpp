@@ -76,7 +76,7 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
     }
 
     //Path restriction sampling
-    if(rng_.uniform01() < 0.2) {
+    if(rng_.uniform01() < 0.5) {
       const auto path = pdef->getSolutionPath()->as<geometric::PathGeometric>();
       const std::vector<base::State *>& path_states = path->getStates();
       sampleFromPath(path_states, state);

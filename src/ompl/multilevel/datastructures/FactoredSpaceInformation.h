@@ -76,7 +76,7 @@ namespace ompl
              * which defines how we map states from this factor space to the
              * added child.
              */
-            bool addChild(FactoredSpaceInformationPtr factor_si, ProjectionPtr projection);
+            bool addChild(FactoredSpaceInformationPtr factor_si, ProjectionPtr projection, bool compute_fiber_space = true);
 
             void setProjectionToParent(ProjectionPtr projection);
             const ProjectionPtr& getProjection() const;
