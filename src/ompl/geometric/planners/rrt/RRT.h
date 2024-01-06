@@ -193,6 +193,8 @@ namespace ompl
 
             /** \brief The most recent goal motion.  Used for PlannerData computation */
             Motion *lastGoalMotion_{nullptr};
+
+            bool use_task_space_{false};
         };
     }
 }

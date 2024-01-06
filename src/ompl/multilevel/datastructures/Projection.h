@@ -42,6 +42,7 @@
 #include <ompl/base/State.h>
 #include <ompl/base/StateSpace.h>
 #include <ompl/multilevel/datastructures/ProjectionTypes.h>
+#include <ompl/multilevel/datastructures/StateTypeToString.h>
 
 namespace ompl
 {
@@ -117,9 +118,6 @@ namespace ompl
 
             /// Print to stream
             virtual void print(std::ostream &out) const;
-
-            /// Return string representing type of ompl::base::StateSpace
-            std::string stateTypeToString(base::StateSpacePtr) const;
 
         protected:
             base::StateSpacePtr bundleSpace_{nullptr};

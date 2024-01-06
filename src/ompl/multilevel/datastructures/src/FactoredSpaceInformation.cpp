@@ -313,6 +313,44 @@ void FactoredSpaceInformation::freeChildStates(std::unordered_map<std::string, o
   childStates.clear();
 }
 
+size_t FactoredSpaceInformation::getTotalNumParents() const {
+  size_t count = 0;
+
+  if(!hasParent()) {
+    return count;
+  }
+
+  count++;
+  auto parent = getParent();
+
+  while(parent->hasParent()) {
+    count++;
+    parent = parent->getParent();
+  }
+  return count;
+}
+
+void FactoredSpaceInformation::printFactorization(std::ostream &out) const
+{
+  out << getName() << " (" << stateTypeToString(getStateSpace()) << ", dimensionality " << getStateDimension() << ")" << std::endl;
+  if (!hasChildren()) {
+    return;
+  }
+
+  const auto children = getChildren();
+
+  const std::string prefix = "└────";
+  const std::string whitespaces = std::string(5, ' ');
+
+  for(const auto& child : children) {
+    for(size_t k = 0; k < child->getTotalNumParents() - 1; k++) {
+      out << whitespaces;
+    }
+    out << prefix;
+    child->printFactorization(out);
+  }
+}
+
 void FactoredSpaceInformation::printSettings(std::ostream &out) const
 {
     SpaceInformation::printSettings(out);

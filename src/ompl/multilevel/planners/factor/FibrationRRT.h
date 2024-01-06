@@ -17,6 +17,9 @@ namespace ompl
 
         class FibrationRRT : public base::Planner 
         {
+          // const size_t kNumberOfIterationsPerPlannerCall = 1;
+          const size_t kNumberOfIterationsPerPlannerCall = 3;
+
           public:
 
             using base::Planner::solve;
@@ -49,6 +52,9 @@ namespace ompl
             size_t numFactors() const;
 
           protected:
+            bool shouldSmoothSolutionPath(const FactoredSpaceInformationPtr& factor);
+            void smoothSolutionPath(const FactoredSpaceInformationPtr& factor);
+
             void grow_(const FactoredSpaceInformationPtr& factor);
             bool hasSolution_(const FactoredSpaceInformationPtr& factor) const;
             const FactoredSpaceInformationPtr& selectFactor_();

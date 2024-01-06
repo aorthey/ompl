@@ -36,8 +36,8 @@
 
 /* Author: Andreas Orthey */
 
-#ifndef OMPL_MULTILEVEL_PLANNERS_FACTOREDSPACEINFORMATION_
-#define OMPL_MULTILEVEL_PLANNERS_FACTOREDSPACEINFORMATION_
+#ifndef OMPL_MULTILEVEL_DATASTRUCTURES_FACTOREDSPACEINFORMATION_
+#define OMPL_MULTILEVEL_DATASTRUCTURES_FACTOREDSPACEINFORMATION_
 
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/util/ClassForward.h>
@@ -67,6 +67,7 @@ namespace ompl
             virtual ~FactoredSpaceInformation() = default;
 
             void printSettings(std::ostream &out) const override;
+            void printFactorization(std::ostream &out) const;
 
             void setup() override;
 
@@ -85,6 +86,10 @@ namespace ompl
             const FactoredSpaceInformationPtr& getParent() const;
 
             bool hasParent() const;
+
+            /** \brief getTotalNumParents: Get the number of ancestors of the
+             * current factor */
+            size_t getTotalNumParents() const;
 
             const std::vector<FactoredSpaceInformationPtr>& getChildren() const;
             const FactoredSpaceInformationPtr& getChild(const std::string& name) const;
@@ -114,7 +119,6 @@ namespace ompl
             bool projectionHasValidIndices(const FactoredSpaceInformationPtr& factor, const ProjectionPtr& projection) const;
             bool projectionHasCorrectPreimage(const ProjectionPtr& projection) const;
             bool projectionHasCorrectImage(const FactoredSpaceInformationPtr& child, const ProjectionPtr& projection) const;
-
         private:
             ProjectionPtr projection_to_parent_{nullptr};
 

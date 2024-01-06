@@ -74,14 +74,15 @@ bool FibrationRRT::hasValidProblemDefinition_(const FactoredSpaceInformationPtr&
     OMPL_ERROR("No valid StateValidityCheckerPtr set in factor space %s.", factor->getName().c_str());
     return false;
   }
-  for(size_t k =0; k < pdef->getStartStateCount(); k++) {
+  for(size_t k = 0; k < pdef->getStartStateCount(); k++) {
     auto state = pdef->getStartState(k);
+    factor->printState(state);
     if(factor->satisfiesBounds(state) && factor->isValid(state)) {
       has_valid_start = true;
     }
   }
   if(!has_valid_start) {
-    OMPL_ERROR("No valid start state for factor %s", factor->getName().c_str());
+    OMPL_ERROR("No valid start state for factor %s (tried %d states).", factor->getName().c_str(), pdef->getStartStateCount());
     return false;
   }
   OMPL_INFORM("Valid problem definition for factor %s", factor->getName().c_str());
@@ -174,7 +175,7 @@ void FibrationRRT::grow_(const FactoredSpaceInformationPtr& factor) {
     createPlannerForFactor_(factor);
   }
   auto& planner = active_planners_[factor->getName()];
-  ompl::base::IterationTerminationCondition itc(1);
+  ompl::base::IterationTerminationCondition itc(kNumberOfIterationsPerPlannerCall);
   planner_status_per_factor_.insert({factor->getName(), planner->solve(itc)});
 }
 
@@ -361,12 +362,10 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
             OMPL_DEBUG(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
             OMPL_DEBUG(" >>> Solved factor %s.", selectedFactor->getName().c_str());
             OMPL_DEBUG(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
-            //Postoptimize path
-            auto pdef = getProblemDefinition(selectedFactor->getName());
-            auto simplifier = std::make_shared<ompl::geometric::PathSimplifier>(selectedFactor, pdef->getGoal());
-            auto path = pdef->getSolutionPath();
-            ompl::geometric::PathGeometric &pgeo = *static_cast<ompl::geometric::PathGeometric *>(path.get());
-            simplifier->simplifyMax(pgeo);
+
+            if(shouldSmoothSolutionPath(selectedFactor)) {
+              smoothSolutionPath(selectedFactor);
+            }
 
             if(!selectedFactor->hasParent()) {
               const auto& name = selectedFactor->getName();
@@ -401,4 +400,28 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
 
     }
     return planner_status_;
+}
+
+bool FibrationRRT::shouldSmoothSolutionPath(const FactoredSpaceInformationPtr& factor) {
+  //Smoothing in higher dimension is often inefficient 
+  if(factor->getStateDimension() > 4) {
+    return false;
+  }
+  return true;
+}
+
+void FibrationRRT::smoothSolutionPath(const FactoredSpaceInformationPtr& factor) {
+  auto pdef = getProblemDefinition(factor->getName());
+  auto path = pdef->getSolutionPath();
+  auto path_geometric = path->as<geometric::PathGeometric>();
+  const size_t Nstates_before = path_geometric->getStateCount();
+  auto simplifier = std::make_shared<geometric::PathSimplifier>(factor);
+  simplifier->simplifyMax(*path_geometric);
+  simplifier->simplifyMax(*path_geometric);
+  const size_t Nstates_after = path_geometric->getStateCount();
+  OMPL_DEBUG("Improved solution path from %d states to %d states.", Nstates_before, Nstates_after);
+  for(const auto& state : path_geometric->getStates()) {
+    factor->printState(state);
+  }
+  pdef->addSolutionPath(path);
 }

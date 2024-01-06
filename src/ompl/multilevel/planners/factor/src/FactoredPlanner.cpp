@@ -5,7 +5,7 @@
 using namespace ompl::multilevel;
 
 FactoredPlanner::FactoredPlanner(const FactoredSpaceInformationPtr& si, const std::vector<FactoredPlannerPtr>& children_planner) 
-  : BaseTypePlanner(si)
+  : BaseTypePlanner(si, false)
 {
   setName("PlannerOn" + si->getName());
   if(!children_planner.empty()) 
@@ -34,6 +34,11 @@ void FactoredPlanner::sampleFromPath(const std::vector<base::State *>& path_stat
       distances.push_back(d);
   }
   const double path_length = std::accumulate(distances.begin(), distances.end(), 0.0f);
+  if(path_length < 1e-3) {
+    OMPL_WARN("Path sampler uses path of length %f", path_length);
+    si_->copyState(state, path_states.front());
+    return;
+  }
   const double random_position_on_path = rng_.uniformReal(0, path_length);
 
   double current_distance = 0.0;
@@ -61,13 +66,13 @@ void FactoredPlanner::sampleFromPath(const std::vector<base::State *>& path_stat
         }
         return;
       }
-      distances.push_back(d);
   }
   OMPL_ERROR("Path sampler reached end of method with length %f and random value %f", path_length, random_position_on_path);
 }
 
 void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state) 
 {
+    const auto sampler = si_->allocStateSampler();
     const auto& pdef = getProblemDefinition();
     if(!pdef->hasSolution()) 
     {
@@ -80,8 +85,10 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
       const auto path = pdef->getSolutionPath()->as<geometric::PathGeometric>();
       const std::vector<base::State *>& path_states = path->getStates();
       sampleFromPath(path_states, state);
+      sampler->sampleUniformNear(state, state, 0.1);
       return;
     }
+    //TODO: add goal sampling
 
     //Tree restriction sampling (vertex version). RRTConnect.
     //const size_t N = tStart_->size() + tGoal_->size();
@@ -100,10 +107,24 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
     //}
 
     //Tree restriction sampling (vertex version). RRT style
-    const size_t N = nn_->size();
-    const size_t R = rng_.uniformInt(0, N-1);
-
     std::vector<Motion*> data;
     nn_->list(data);
-    si_->copyState(state, data.at(R)->state);
+
+    const size_t N = nn_->size();
+    const size_t R = rng_.uniformInt(0, N-1);
+    const auto random_config = data.at(R);
+
+    if(random_config->parent == nullptr) {
+      si_->copyState(state, random_config->state);
+      return;
+    }
+
+    const double t = rng_.uniform01();
+    const auto random_state = random_config->state;
+    const auto parent_state = random_config->parent->state;
+    si_->getStateSpace()->interpolate(parent_state, random_state, t, state);
+
+    //Randomly perturbate state
+    sampler->sampleUniformNear(state, state, 0.05);
+
 }
