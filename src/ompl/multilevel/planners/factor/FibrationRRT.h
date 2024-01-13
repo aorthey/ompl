@@ -51,6 +51,9 @@ namespace ompl
 
             size_t numFactors() const;
 
+            void setSmoothIntermediateSolutions(bool smoothing_enabled = true);
+            bool getSmoothIntermediateSolutions() const;
+
           protected:
             bool shouldSmoothSolutionPath(const FactoredSpaceInformationPtr& factor);
             void smoothSolutionPath(const FactoredSpaceInformationPtr& factor);
@@ -89,6 +92,7 @@ namespace ompl
             unsigned int iterations_{0};
             float bestCost_;
             std::optional<double> range_;
+            bool smoothing_enabled_;
         };
 
     }

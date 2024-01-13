@@ -21,6 +21,15 @@ FibrationRRT::FibrationRRT(const FactoredSpaceInformationPtr &si) :
   addPlannerProgressProperty("best cost REAL", [this] { return getBestCostProperty(); });
 
   Planner::declareParam<double>("range", this, &FibrationRRT::setRange, &FibrationRRT::getRange, "0.:1.:10000.");
+  Planner::declareParam<bool>("smoothIntermediateSolutions", this, &FibrationRRT::setSmoothIntermediateSolutions, &FibrationRRT::getSmoothIntermediateSolutions, "0,1");
+}
+
+void FibrationRRT::setSmoothIntermediateSolutions(bool smoothing_enabled) {
+  smoothing_enabled_ = smoothing_enabled;
+}
+
+bool FibrationRRT::getSmoothIntermediateSolutions() const {
+  return smoothing_enabled_;
 }
 
 FibrationRRT::~FibrationRRT() {
@@ -403,6 +412,9 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
 }
 
 bool FibrationRRT::shouldSmoothSolutionPath(const FactoredSpaceInformationPtr& factor) {
+  if(smoothing_enabled_) {
+    return true;
+  }
   //Smoothing in higher dimension is often inefficient 
   if(factor->getStateDimension() > 4) {
     return false;
