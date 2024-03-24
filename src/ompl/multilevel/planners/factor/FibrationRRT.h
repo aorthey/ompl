@@ -19,6 +19,7 @@ namespace ompl
         {
           // const size_t kNumberOfIterationsPerPlannerCall = 1;
           const size_t kNumberOfIterationsPerPlannerCall = 3;
+          const float kGlobalGoalTreshold = 0.01;
 
           public:
 

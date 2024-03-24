@@ -306,6 +306,8 @@ void FibrationRRT::createProblemDefinition_(const FactoredSpaceInformationPtr& f
 
     auto goal = std::make_shared<base::GoalState>(factor);
     goal->setState(goal_state);
+    goal->setThreshold(kGlobalGoalTreshold);
+
     pdef->setGoal(goal);
   }
   if(type == base::GoalType::FACTORED_GOAL) {
