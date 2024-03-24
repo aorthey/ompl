@@ -413,7 +413,7 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
 
   std::vector<NodeState> node_states;
   for(const auto& leaf_node_state : leaf_node_states) {
-    // OMPL_WARN("Add leaf node %s", leaf_node_state.first.c_str());
+    OMPL_WARN("Add leaf node %s", leaf_node_state.first.c_str());
     node_states.push_back(std::make_pair(leaf_node_state.first, leaf_node_state.second));
   }
 

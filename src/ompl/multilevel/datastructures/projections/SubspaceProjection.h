@@ -25,6 +25,7 @@ namespace ompl
         class Projection_Subspace : public InclusionProjection
         {
         public:
+            Projection_Subspace(const base::SpaceInformationPtr& siBundle, const base::SpaceInformationPtr& siBase, unsigned int subspace_index);
             Projection_Subspace(base::StateSpacePtr bundleSpace, base::StateSpacePtr baseSpace, unsigned int subspace_index);
 
             virtual ~Projection_Subspace() = default;

@@ -1,6 +1,11 @@
 /* Author: Andreas Orthey */
 
 #include <ompl/multilevel/datastructures/projections/SubspaceProjection.h>
+#include <ompl/base/SpaceInformation.h>
+
+ompl::multilevel::Projection_Subspace::Projection_Subspace(
+    const base::SpaceInformationPtr& siBundle, const base::SpaceInformationPtr& siBase, unsigned int subspace_index)
+  : Projection_Subspace(siBundle->getStateSpace(), siBase->getStateSpace(), subspace_index) {} 
 
 ompl::multilevel::Projection_Subspace::Projection_Subspace(ompl::base::StateSpacePtr bundleSpace, 
     ompl::base::StateSpacePtr baseSpace, unsigned int subspace_index)
@@ -22,10 +27,14 @@ ompl::multilevel::Projection_Subspace::Projection_Subspace(ompl::base::StateSpac
   }
   if(!(immersion_space_->covers(baseSpace) && baseSpace->covers(immersion_space_))) {
     OMPL_ERROR("Subspace has to be equal to base space.");
+    OMPL_ERROR("Base space has dimension %d (type %d) but subspace has dimension %d (type %d).",
+    baseSpace->getDimension(), baseSpace->getType(),
+    immersion_space_->getDimension(), immersion_space_->getType());
     throw "InvalidBaseSpace";
   }
 
   subspace_index_ = subspace_index;
+  setType(PROJECTION_SUBSPACE);
 }
 
 void ompl::multilevel::Projection_Subspace::project(const ompl::base::State *xBundle, ompl::base::State *xBase) const 
@@ -43,12 +52,4 @@ void ompl::multilevel::Projection_Subspace::inclusionMap(const ompl::base::State
 {
   auto cstate = xBundle->as<base::CompoundState>();
   immersion_space_->copyState(cstate->operator[](subspace_index_), xBase);
-
-//   std::vector<size_t> indices = getInclusionIndices();
-//   for(const auto& index : indices) 
-//   {
-//     double* value = getBundle()->getValueAddressAtIndex(xBundle, index);
-//     const double* baseValue = getBase()->getValueAddressAtIndex(xBase, index);
-//     *value = *baseValue;
-//   }
 }

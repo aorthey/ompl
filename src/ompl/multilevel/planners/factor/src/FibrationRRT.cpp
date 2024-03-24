@@ -85,7 +85,6 @@ bool FibrationRRT::hasValidProblemDefinition_(const FactoredSpaceInformationPtr&
   }
   for(size_t k = 0; k < pdef->getStartStateCount(); k++) {
     auto state = pdef->getStartState(k);
-    factor->printState(state);
     if(factor->satisfiesBounds(state) && factor->isValid(state)) {
       has_valid_start = true;
     }

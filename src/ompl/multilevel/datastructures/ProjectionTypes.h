@@ -106,6 +106,13 @@ namespace ompl
              * space T) */
             PROJECTION_TASK_SPACE = 19,
 
+            /** \brief RN x T \rightarrow RN (A mapping from RN plus time to RN) */
+            PROJECTION_RNTIME_RN = 20,
+
+            /** \brief X1 \times \vdots \times XN \rightarrow Xi 
+             * (A mapping from a set of compound spaces to a single subspace) */
+            PROJECTION_SUBSPACE = 21,
+
             /** \brief Compound projection */
             PROJECTION_COMPOUND = -2,
 

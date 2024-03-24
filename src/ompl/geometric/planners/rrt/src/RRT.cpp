@@ -144,10 +144,14 @@ ompl::base::PlannerStatus ompl::geometric::RRT::solve(const base::PlannerTermina
             sampler_->sampleUniform(rstate);
         }
 
+        //OMPL_ERROR("Sample state:");
+        //si_->printState(rstate);
         /* find closest state in the tree */
         Motion *nmotion = nn_->nearest(rmotion);
         base::State *dstate = rstate;
 
+        //OMPL_ERROR("Nearest state:");
+        //si_->printState(nmotion->state);
         /* find state to add */
         double d = si_->distance(nmotion->state, rstate);
         if (d >= std::numeric_limits<double>::infinity()) {

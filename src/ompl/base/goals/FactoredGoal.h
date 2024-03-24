@@ -46,7 +46,8 @@ namespace ompl
     {
         OMPL_CLASS_FORWARD(GoalSampleableRegion);
 
-        /** \brief Definition of a factored goal */
+        /** \brief Definition of a factored goal, where the goal is implicitly
+         * defined by goal regions on the child spaces of a factored space */
         class FactoredGoal : public GoalSampleableRegion
         {
         public:

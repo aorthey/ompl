@@ -41,11 +41,12 @@
 
 void ompl::base::TimeStateSampler::sampleUniform(State *state)
 {
-    if (space_->as<TimeStateSpace>()->isBounded())
+    if (space_->as<TimeStateSpace>()->isBounded()) {
         state->as<TimeStateSpace::StateType>()->position = rng_.uniformReal(
             space_->as<TimeStateSpace>()->getMinTimeBound(), space_->as<TimeStateSpace>()->getMaxTimeBound());
-    else
+    } else {
         state->as<TimeStateSpace::StateType>()->position = 0.0;
+    }
 }
 
 void ompl::base::TimeStateSampler::sampleUniformNear(State *state, const State *near, const double distance)
