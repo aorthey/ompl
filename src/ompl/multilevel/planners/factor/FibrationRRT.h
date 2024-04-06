@@ -93,7 +93,7 @@ namespace ompl
             unsigned int iterations_{0};
             float bestCost_;
             std::optional<double> range_;
-            bool smoothing_enabled_;
+            bool smoothing_enabled_{false};
         };
 
     }

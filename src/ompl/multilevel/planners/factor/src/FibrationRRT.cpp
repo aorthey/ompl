@@ -175,8 +175,13 @@ size_t FibrationRRT::numFactors() const {
 }
 
 void FibrationRRT::grow_(const FactoredSpaceInformationPtr& factor) {
-  OMPL_INFORM("Growing factor %s (%d/%d active factor%s)", factor->getName().c_str(), active_factors_.size(),
-      numFactors(), (active_factors_.size() > 1 ? "s" : ""));
+  std::string status_msg;
+  if(hasSolution_(factor)) {
+    status_msg = " [has solution]";
+  }
+  OMPL_INFORM("Growing factor %s (%d/%d active factor%s)%s", factor->getName().c_str(), active_factors_.size(),
+      numFactors(), (active_factors_.size() > 1 ? "s" : ""),
+      status_msg.c_str());
 
   auto iterator = active_planners_.find(factor->getName());
   if(iterator == active_planners_.end()) {
@@ -401,6 +406,18 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
           }
         }
     }
+
+    int num_all_factors = problem_definitions_per_factor_.size();
+    int num_solved_factors = 0;
+    for(const auto& active_factor : active_factors_) {
+      if(is_solved_.at(active_factor->getName())) {
+        num_solved_factors++;
+      }
+    }
+    OMPL_DEBUG(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
+    OMPL_DEBUG(" >>> Finished planning. Solved %d/%d factors (%d/%d active factors).", 
+        num_solved_factors, num_all_factors, active_factors_.size(), num_all_factors);
+    OMPL_DEBUG(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
     if(pdef_->hasExactSolution()) {
       planner_status_ = base::PlannerStatus::StatusType::EXACT_SOLUTION;
       const auto pgeo = dynamic_pointer_cast<ompl::geometric::PathGeometric>(pdef_->getSolutionPath());

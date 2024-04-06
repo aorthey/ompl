@@ -35,22 +35,56 @@
 
 /* Author: Andreas Orthey */
 
-#ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_BUNDLE_COMPONENT_RNTIME_RN__
-#define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_BUNDLE_COMPONENT_RNTIME_RN__
+#ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_BUNDLE_COMPONENT_TIMEBASEDPROJECTION__
+#define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_BUNDLE_COMPONENT_TIMEBASEDPROJECTION__
 #include <ompl/multilevel/datastructures/projections/FiberedProjection.h>
 
 namespace ompl
 {
     namespace multilevel
     {
-        class Projection_RNTIME_RN : public FiberedProjection
+        struct InternalTimeBasedProjection {
+          InternalTimeBasedProjection(base::StateSpacePtr bundleSpace, base::StateSpacePtr baseSpace) :
+            bundleSpace(bundleSpace), baseSpace(baseSpace) {}
+          virtual ~InternalTimeBasedProjection(){};
+
+          virtual void project(const ompl::base::State *xBundle, ompl::base::State *xBase) const = 0;
+
+          virtual void lift(const ompl::base::State *xBase, const ompl::base::State *xFiber,
+                            ompl::base::State *xBundle) const = 0;
+          virtual void verify() = 0;
+          unsigned int time_component_index_{0};
+
+          base::StateSpacePtr bundleSpace;
+          base::StateSpacePtr baseSpace;
+        };
+
+        struct InternalTimeBasedCompoundProjection : public InternalTimeBasedProjection{
+          using InternalTimeBasedProjection::InternalTimeBasedProjection;
+          void project(const ompl::base::State *xBundle, ompl::base::State *xBase) const override;
+          void lift(const ompl::base::State *xBase, const ompl::base::State *xFiber,
+                            ompl::base::State *xBundle) const override;
+          void verify() override;
+
+          unsigned int GetBaseIndexFromBundleIndex(unsigned int bundle_index) const;
+        };
+        struct InternalTimeBasedNonCompoundProjection : public InternalTimeBasedProjection{
+          using InternalTimeBasedProjection::InternalTimeBasedProjection;
+          void project(const ompl::base::State *xBundle, ompl::base::State *xBase) const override;
+          void lift(const ompl::base::State *xBase, const ompl::base::State *xFiber,
+                            ompl::base::State *xBundle) const override;
+          void verify() override;
+        };
+
+
+        class Projection_TimeBased : public FiberedProjection
         {
             using BaseT = FiberedProjection;
 
         public:
-            Projection_RNTIME_RN(base::StateSpacePtr BundleSpace, base::StateSpacePtr BaseSpace);
+            Projection_TimeBased(base::StateSpacePtr bundleSpace, base::StateSpacePtr baseSpace);
 
-            ~Projection_RNTIME_RN() override = default;
+            ~Projection_TimeBased() override = default;
 
             virtual void projectFiber(const ompl::base::State *xBundle, ompl::base::State *xFiber) const override;
 
@@ -60,6 +94,9 @@ namespace ompl
                               ompl::base::State *xBundle) const override;
         protected:
             ompl::base::StateSpacePtr computeFiberSpace() override;
+
+            std::shared_ptr<InternalTimeBasedProjection> internal_projection_;
+
         };
     }
 }

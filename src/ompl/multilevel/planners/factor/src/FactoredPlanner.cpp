@@ -128,5 +128,4 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
 
     //Randomly perturbate state
     sampler->sampleUniformNear(state, state, 0.05);
-
 }
