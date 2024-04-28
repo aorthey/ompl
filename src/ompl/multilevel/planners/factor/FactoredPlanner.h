@@ -5,7 +5,7 @@
 #include "ompl/base/SpaceInformation.h"
 #include "ompl/util/ClassForward.h"
 #include "ompl/geometric/planners/rrt/RRTConnect.h"
-#include "ompl/geometric/planners/rrt/RRT.h"
+#include "ompl/geometric/planners/rrt/RRTtask.h"
 #include "ompl/geometric/planners/rlrt/RLRT.h"
 
 #include <optional>
@@ -16,7 +16,7 @@ namespace ompl {
         OMPL_CLASS_FORWARD(FactoredPlanner);
         OMPL_CLASS_FORWARD(FactoredSpaceInformation);
 
-        typedef ompl::geometric::RRT BaseTypePlanner;
+        typedef ompl::geometric::RRTtask BaseTypePlanner;
 
         class FactoredPlanner : public BaseTypePlanner {
           public:
@@ -27,6 +27,8 @@ namespace ompl {
 
             void sampleFromDatastructure(ompl::base::State* state);
             void sampleFromPath(const std::vector<base::State *>& path_states, ompl::base::State* state);
+
+            size_t getNumberOfSamples() const;
 
             void setSeed(size_t seed);
         };

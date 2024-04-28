@@ -34,8 +34,8 @@
 
 /* Author: Ioan Sucan */
 
-#ifndef OMPL_GEOMETRIC_PLANNERS_RRT_RRT_
-#define OMPL_GEOMETRIC_PLANNERS_RRT_RRT_
+#ifndef OMPL_GEOMETRIC_PLANNERS_RRT_RRTTASK_
+#define OMPL_GEOMETRIC_PLANNERS_RRT_RRTTASK_
 
 #include "ompl/datastructures/NearestNeighbors.h"
 #include "ompl/geometric/planners/PlannerIncludes.h"
@@ -47,14 +47,14 @@ namespace ompl
         /**
            @anchor gRRT
            @par Short description
-           RRT is a tree-based motion planner that uses the following
-           idea: RRT samples a random state @b qr in the state space,
+           RRTtask is a tree-based motion planner that uses the following
+           idea: RRTtask samples a random state @b qr in the state space,
            then finds the state @b qc among the previously seen states
            that is closest to @b qr and expands from @b qc towards @b
            qr, until a state @b qm is reached. @b qm is then added to
            the exploration tree.
            @par External documentation
-           J. Kuffner and S.M. LaValle, RRT-connect: An efficient approach to single-query path planning, in <em>Proc.
+           J. Kuffner and S.M. LaValle, RRTtask-connect: An efficient approach to single-query path planning, in <em>Proc.
            2000 IEEE Intl. Conf. on Robotics and Automation</em>, pp. 995–1001, Apr. 2000. DOI:
            [10.1109/ROBOT.2000.844730](http://dx.doi.org/10.1109/ROBOT.2000.844730)<br>
            [[PDF]](http://ieeexplore.ieee.org/ielx5/6794/18246/00844730.pdf?tp=&arnumber=844730&isnumber=18246)
@@ -62,13 +62,13 @@ namespace ompl
         */
 
         /** \brief Rapidly-exploring Random Trees */
-        class RRT : public base::Planner
+        class RRTtask : public base::Planner
         {
         public:
             /** \brief Constructor */
-            RRT(const base::SpaceInformationPtr &si, bool addIntermediateStates = false);
+            RRTtask(const base::SpaceInformationPtr &si, bool addIntermediateStates = false);
 
-            ~RRT() override;
+            ~RRTtask() override;
 
             void getPlannerData(base::PlannerData &data) const override;
 
@@ -180,7 +180,7 @@ namespace ompl
 
             /** \brief The fraction of time the goal is picked as the state to expand towards (if such a state is
              * available) */
-            double goalBias_{.05};
+            double goalBias_{.25}; //was 0.05
 
             /** \brief The maximum length of a motion to be added to a tree */
             double maxDistance_{0.};
@@ -193,6 +193,19 @@ namespace ompl
 
             /** \brief The most recent goal motion.  Used for PlannerData computation */
             Motion *lastGoalMotion_{nullptr};
+
+            bool use_task_space_{false};
+
+            std::pair<base::State*, double> lastValid;
+
+            bool first_run_{true};
+
+            base::State *xstate;
+
+            /** \brief Random motion and state */
+            Motion *rmotion{nullptr};
+
+            base::State *rstate;
         };
     }
 }

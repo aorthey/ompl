@@ -12,6 +12,7 @@ FactoredPlanner::FactoredPlanner(const FactoredSpaceInformationPtr& si, const st
   {
     sampler_ = std::make_shared<RestrictionSampler>(si, children_planner);
   }
+  setIntermediateStates(false);
 }
 
 ompl::base::PlannerStatus FactoredPlanner::solve(const ompl::base::PlannerTerminationCondition &ptc) 
@@ -68,6 +69,13 @@ void FactoredPlanner::sampleFromPath(const std::vector<base::State *>& path_stat
       }
   }
   OMPL_ERROR("Path sampler reached end of method with length %f and random value %f", path_length, random_position_on_path);
+}
+
+size_t FactoredPlanner::getNumberOfSamples() const {
+  if(!nn_) {
+    return 0;
+  }
+  return nn_->size();
 }
 
 void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state) 

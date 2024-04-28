@@ -38,7 +38,6 @@
 #include <limits>
 #include "ompl/base/goals/GoalSampleableRegion.h"
 #include "ompl/tools/config/SelfConfig.h"
-#include "ompl/multilevel/datastructures/TaskSpaceMotionValidator.h"
 
 ompl::geometric::RRT::RRT(const base::SpaceInformationPtr &si, bool addIntermediateStates)
   : base::Planner(si, addIntermediateStates ? "RRTintermediate" : "RRT")
@@ -52,9 +51,6 @@ ompl::geometric::RRT::RRT(const base::SpaceInformationPtr &si, bool addIntermedi
                                 "0,1");
 
     addIntermediateStates_ = addIntermediateStates;
-    if(dynamic_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator()) != nullptr) {
-        use_task_space_ = true;
-    }
 }
 
 ompl::geometric::RRT::~RRT()
@@ -104,24 +100,23 @@ ompl::base::PlannerStatus ompl::geometric::RRT::solve(const base::PlannerTermina
     base::Goal *goal = pdef_->getGoal().get();
     auto *goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
 
-    if(nn_->size() == 0) {
-      while (const base::State *st = pis_.nextStart())
-      {
-          auto *motion = new Motion(si_);
-          si_->copyState(motion->state, st);
-          nn_->add(motion);
-      }
-      if (nn_->size() == 0)
-      {
-          OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
-          return base::PlannerStatus::INVALID_START;
-      }
+    while (const base::State *st = pis_.nextStart())
+    {
+        auto *motion = new Motion(si_);
+        si_->copyState(motion->state, st);
+        nn_->add(motion);
+    }
+
+    if (nn_->size() == 0)
+    {
+        OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
+        return base::PlannerStatus::INVALID_START;
     }
 
     if (!sampler_)
         sampler_ = si_->allocStateSampler();
 
-    OMPL_INFORM("%s: Start planning with %u states already in datastructure", getName().c_str(), nn_->size());
+    OMPL_INFORM("%s: Starting planning with %u states already in datastructure", getName().c_str(), nn_->size());
 
     Motion *solution = nullptr;
     Motion *approxsol = nullptr;
@@ -130,137 +125,72 @@ ompl::base::PlannerStatus ompl::geometric::RRT::solve(const base::PlannerTermina
     base::State *rstate = rmotion->state;
     base::State *xstate = si_->allocState();
 
-    std::pair<base::State*, double> lastValid;
-    lastValid.first = si_->allocState();
     while (!ptc)
     {
         /* sample random state (with goal biasing) */
         if ((goal_s != nullptr) && rng_.uniform01() < goalBias_ && goal_s->canSample())
-        {
             goal_s->sampleGoal(rstate);
-        }
         else
-        {
             sampler_->sampleUniform(rstate);
-        }
 
-        //OMPL_ERROR("Sample state:");
-        //si_->printState(rstate);
         /* find closest state in the tree */
         Motion *nmotion = nn_->nearest(rmotion);
         base::State *dstate = rstate;
 
-        //OMPL_ERROR("Nearest state:");
-        //si_->printState(nmotion->state);
         /* find state to add */
         double d = si_->distance(nmotion->state, rstate);
-        if (d >= std::numeric_limits<double>::infinity()) {
-          continue;
-        }
-
-        if(use_task_space_) {
-          auto motion_validator = static_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator());
-          auto states = motion_validator->propagateMotion(nmotion->state, dstate);
-          if(states.size() <= 1) {
-            continue;
-          }
-
-          for (std::size_t i = 1; i < states.size(); ++i)
-          {
-              auto *motion = new Motion;
-              motion->state = states[i];
-              motion->parent = nmotion;
-              nn_->add(motion);
-
-              nmotion = motion;
-          }
-        } else {
-          //Default checkMotion
-          if (d > maxDistance_)
-          {
-              si_->getStateSpace()->interpolate(nmotion->state, rstate, maxDistance_ / d, xstate);
-              dstate = xstate;
-          }
-          auto reached = si_->checkMotion(nmotion->state, dstate, lastValid);
-          if (reached || lastValid.second > 0.0) //si_->checkMotion(nmotion->state, dstate, lastValid))
-          {
-              if(!reached) {
-                dstate = lastValid.first;
-              }
-              auto *motion = new Motion(si_);
-              si_->copyState(motion->state, dstate);
-              motion->parent = nmotion;
-              nn_->add(motion);
-
-              nmotion = motion;
-          }
-        }
-        double dist = 0.0;
-        bool sat = goal->isSatisfied(nmotion->state, &dist);
-        if (sat)
+        if (d > maxDistance_)
         {
-            approxdif = dist;
-            solution = nmotion;
-            break;
+            si_->getStateSpace()->interpolate(nmotion->state, rstate, maxDistance_ / d, xstate);
+            dstate = xstate;
         }
-        if (dist < approxdif)
+
+        if (si_->checkMotion(nmotion->state, dstate))
         {
-            approxdif = dist;
-            approxsol = nmotion;
+            if (addIntermediateStates_)
+            {
+                std::vector<base::State *> states;
+                const unsigned int count = si_->getStateSpace()->validSegmentCount(nmotion->state, dstate);
+
+                if (si_->getMotionStates(nmotion->state, dstate, states, count, true, true))
+                    si_->freeState(states[0]);
+
+                for (std::size_t i = 1; i < states.size(); ++i)
+                {
+                    auto *motion = new Motion;
+                    motion->state = states[i];
+                    motion->parent = nmotion;
+                    nn_->add(motion);
+
+                    nmotion = motion;
+                }
+            }
+            else
+            {
+                auto *motion = new Motion(si_);
+                si_->copyState(motion->state, dstate);
+                motion->parent = nmotion;
+                nn_->add(motion);
+
+                nmotion = motion;
+            }
+
+            double dist = 0.0;
+            bool sat = goal->isSatisfied(nmotion->state, &dist);
+            if (sat)
+            {
+                approxdif = dist;
+                solution = nmotion;
+                break;
+            }
+            if (dist < approxdif)
+            {
+                approxdif = dist;
+                approxsol = nmotion;
+            }
         }
-
-
-        // auto reached = si_->checkMotion(nmotion->state, dstate, lastValid);
-        // if (reached || lastValid.second > 0.0) //si_->checkMotion(nmotion->state, dstate, lastValid))
-        // {
-        //     if(!reached) {
-        //       dstate = lastValid.first;
-        //     }
-        //     // if (addIntermediateStates_)
-        //     // {
-        //     //     std::vector<base::State *> states;
-        //     //     const unsigned int count = si_->getStateSpace()->validSegmentCount(nmotion->state, dstate);
-
-        //     //     if (si_->getMotionStates(nmotion->state, dstate, states, count, true, true))
-        //     //         si_->freeState(states[0]);
-
-        //     //     for (std::size_t i = 1; i < states.size(); ++i)
-        //     //     {
-        //     //         auto *motion = new Motion;
-        //     //         motion->state = states[i];
-        //     //         motion->parent = nmotion;
-        //     //         nn_->add(motion);
-
-        //     //         nmotion = motion;
-        //     //     }
-        //     // }
-        //     // else
-        //     // {
-        //         auto *motion = new Motion(si_);
-        //         si_->copyState(motion->state, dstate);
-        //         motion->parent = nmotion;
-        //         nn_->add(motion);
-
-        //         nmotion = motion;
-        //     // }
-
-        //     double dist = 0.0;
-        //     bool sat = goal->isSatisfied(nmotion->state, &dist);
-        //     if (sat)
-        //     {
-        //         approxdif = dist;
-        //         solution = nmotion;
-        //         break;
-        //     }
-        //     if (dist < approxdif)
-        //     {
-        //         approxdif = dist;
-        //         approxsol = nmotion;
-        //     }
-        // }
     }
 
-    si_->freeState(lastValid.first);
     bool solved = false;
     bool approximate = false;
     if (solution == nullptr)

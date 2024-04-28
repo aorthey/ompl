@@ -16,6 +16,7 @@ ompl::base::FactoredGoal::FactoredGoal(const ompl::multilevel::FactoredSpaceInfo
       tmp_goal_states_.insert({name, si->getChild(name)->allocState()});
     }
 }
+
 ompl::base::FactoredGoal::~FactoredGoal() {
     for(const auto& goal : goals_) {
       const auto& name = goal.first;

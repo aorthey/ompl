@@ -15,17 +15,18 @@ namespace ompl
         OMPL_CLASS_FORWARD(FactoredSpaceInformation);
         OMPL_CLASS_FORWARD(FactoredPlanner);
 
+        const size_t kNumberOfIterationsPerPlannerCall = 1;
+        //const size_t kNumberOfIterationsPerPlannerCall = 3;
+        const float kGlobalGoalTreshold = 0.1;
+
         class FibrationRRT : public base::Planner 
         {
-          // const size_t kNumberOfIterationsPerPlannerCall = 1;
-          const size_t kNumberOfIterationsPerPlannerCall = 3;
-          const float kGlobalGoalTreshold = 0.01;
 
           public:
 
             using base::Planner::solve;
 
-            FibrationRRT(const FactoredSpaceInformationPtr &si);
+            FibrationRRT(const FactoredSpaceInformationPtr &si, float goal_threshold = kGlobalGoalTreshold);
 
             ~FibrationRRT() override;
 
@@ -94,6 +95,7 @@ namespace ompl
             float bestCost_;
             std::optional<double> range_;
             bool smoothing_enabled_{false};
+            float goal_threshold_{kGlobalGoalTreshold};
         };
 
     }
