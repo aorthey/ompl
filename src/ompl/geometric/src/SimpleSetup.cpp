@@ -225,16 +225,16 @@ void ompl::geometric::SimpleSetup::getPlannerData(base::PlannerData &pd) const
 
 void ompl::geometric::SimpleSetup::print(std::ostream &out) const
 {
-    if (si_)
-    {
-        si_->printProperties(out);
-        si_->printSettings(out);
-    }
-    if (planner_)
-    {
-        planner_->printProperties(out);
-        planner_->printSettings(out);
-    }
-    if (pdef_)
-        pdef_->print(out);
+    // if (si_)
+    // {
+    //     si_->printProperties(out);
+    //     si_->printSettings(out);
+    // }
+    // if (planner_)
+    // {
+    //     planner_->printProperties(out);
+    //     planner_->printSettings(out);
+    // }
+    // if (pdef_)
+    //     pdef_->print(out);
 }

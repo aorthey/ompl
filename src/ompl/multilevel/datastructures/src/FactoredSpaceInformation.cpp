@@ -353,7 +353,7 @@ void FactoredSpaceInformation::printFactorization(std::ostream &out) const
 
 void FactoredSpaceInformation::printSettings(std::ostream &out) const
 {
-    SpaceInformation::printSettings(out);
+    //SpaceInformation::printSettings(out);
     out << "Factorization of " << getName() << " has ";
     if(hasChildren()) {
       const auto& children = getChildren();

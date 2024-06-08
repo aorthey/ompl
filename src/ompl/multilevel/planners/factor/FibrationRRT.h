@@ -77,9 +77,6 @@ namespace ompl
           private:
             RNG rng_;
 
-            // std::vector<std::pair<FactoredSpaceInformationPtr, base::State*>> start_states_;
-            // std::vector<std::pair<FactoredSpaceInformationPtr, base::State*>> goal_states_;
-
             std::optional<size_t> seed_;
 
             std::vector<FactoredSpaceInformationPtr> active_factors_;
@@ -92,7 +89,7 @@ namespace ompl
             base::PlannerStatus planner_status_;
 
             unsigned int iterations_{0};
-            float bestCost_;
+            float bestCost_{std::numeric_limits<float>::infinity()};
             std::optional<double> range_;
             bool smoothing_enabled_{false};
             float goal_threshold_{kGlobalGoalTreshold};

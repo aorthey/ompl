@@ -254,7 +254,6 @@ ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTer
         }
         double dist = 0.0;
         bool sat = goal->isSatisfied(nmotion->state, &dist);
-        OMPL_DEBUG("Distance to goal: %f", dist);
         if (sat)
         {
             approxdif = dist;

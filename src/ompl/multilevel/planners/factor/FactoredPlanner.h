@@ -16,6 +16,9 @@ namespace ompl {
         OMPL_CLASS_FORWARD(FactoredPlanner);
         OMPL_CLASS_FORWARD(FactoredSpaceInformation);
 
+        const double kPathRestrictionSamplingBias = 0.2;
+        const double kPathRestrictionSurroundingBias = 0.1;
+        const double kSamplingPerturbationValue  = 0.05;
         typedef ompl::geometric::RRTtask BaseTypePlanner;
 
         class FactoredPlanner : public BaseTypePlanner {

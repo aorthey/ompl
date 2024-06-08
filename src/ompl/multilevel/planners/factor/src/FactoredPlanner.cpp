@@ -89,11 +89,11 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
     }
 
     //Path restriction sampling
-    if(rng_.uniform01() < 0.2) {
+    if(rng_.uniform01() < kPathRestrictionSamplingBias) {
       const auto path = pdef->getSolutionPath()->as<geometric::PathGeometric>();
       const std::vector<base::State *>& path_states = path->getStates();
       sampleFromPath(path_states, state);
-      sampler->sampleUniformNear(state, state, 0.1);
+      sampler->sampleUniformNear(state, state, kPathRestrictionSurroundingBias);
       return;
     }
     //TODO: add goal sampling
@@ -135,5 +135,5 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
     // si_->printState(state);
 
     //Randomly perturbate state
-    sampler->sampleUniformNear(state, state, 0.05);
+    sampler->sampleUniformNear(state, state, kSamplingPerturbationValue);
 }

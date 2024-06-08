@@ -15,14 +15,43 @@ using namespace ompl::multilevel;
 FibrationRRT::FibrationRRT(const FactoredSpaceInformationPtr &si, float goal_threshold) :
    ompl::base::Planner(si, "FibrationRRT"), goal_threshold_(goal_threshold)
 {
-  specs_.approximateSolutions = false;
+  specs_.recognizedGoal = base::GOAL_SAMPLEABLE_REGION;
+  //specs_.approximateSolutions = true;
   specs_.directed = true;
-  specs_.optimizingPaths = true;
-  addPlannerProgressProperty("iterations INTEGER", [this] { return getIterationsProperty(); });
-  addPlannerProgressProperty("best cost REAL", [this] { return getBestCostProperty(); });
+  //specs_.optimizingPaths = false;
+
+  //addPlannerProgressProperty("iterations INTEGER", [this] { return getIterationsProperty(); });
+  //addPlannerProgressProperty("best cost REAL", [this] { return getBestCostProperty(); });
 
   Planner::declareParam<double>("range", this, &FibrationRRT::setRange, &FibrationRRT::getRange, "0.:1.:10000.");
   Planner::declareParam<bool>("smoothIntermediateSolutions", this, &FibrationRRT::setSmoothIntermediateSolutions, &FibrationRRT::getSmoothIntermediateSolutions, "0,1");
+}
+
+FibrationRRT::~FibrationRRT() {
+  clear();
+}
+
+void FibrationRRT::clear() {
+  for(const auto& planner : active_planners_) {
+    planner.second->clear();
+  }
+  active_planners_.clear();
+  active_factors_.clear();
+  is_active_.clear();
+  is_solved_.clear();
+  planner_status_per_factor_.clear();
+  iterations_ = 0;
+  
+  planner_status_ = base::PlannerStatus::StatusType::UNKNOWN;
+  bestCost_ = std::numeric_limits<float>::infinity();
+  for(auto& problem_definition : problem_definitions_per_factor_) {
+    problem_definition.second->clearSolutionPaths();
+  }
+  Planner::clear();
+}
+
+void FibrationRRT::setup() {
+  Planner::setup();
 }
 
 void FibrationRRT::setSmoothIntermediateSolutions(bool smoothing_enabled) {
@@ -31,12 +60,6 @@ void FibrationRRT::setSmoothIntermediateSolutions(bool smoothing_enabled) {
 
 bool FibrationRRT::getSmoothIntermediateSolutions() const {
   return smoothing_enabled_;
-}
-
-FibrationRRT::~FibrationRRT() {
-  for(const auto& planner : active_planners_) {
-    planner.second->clear();
-  }
 }
 
 void FibrationRRT::getPlannerData(base::PlannerData &data) const {
@@ -152,15 +175,6 @@ const FactoredSpaceInformationPtr& FibrationRRT::selectFactor_() {
   }
   auto index = pdf.sample(rng_.uniform01());
   return active_factors_.at(index);
-}
-
-void FibrationRRT::clear() {
-  Planner::clear();
-  iterations_ = 0;
-}
-
-void FibrationRRT::setup() {
-  Planner::setup();
 }
 
 bool FibrationRRT::hasSolution_(const FactoredSpaceInformationPtr& factor) const {
@@ -414,7 +428,10 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
               const auto& name = selectedFactor->getName();
               OMPL_INFORM(" >>>>>> Found solution on root factor %s", name.c_str());
               planner_status_ = base::PlannerStatus::StatusType::EXACT_SOLUTION;
-              continue;
+              auto pdef = getProblemDefinition(name);
+              auto path = pdef->getSolutionPath();
+              pdef->addSolutionPath(path);
+              break;
             }
           }
 
@@ -452,7 +469,6 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
       if(pgeo) {
         OMPL_INFORM("Found exact solution of length %f with %d waypoints.", pgeo->length(), pgeo->getStateCount());
       }
-
     }
     return planner_status_;
 }
@@ -478,8 +494,8 @@ void FibrationRRT::smoothSolutionPath(const FactoredSpaceInformationPtr& factor)
   simplifier->simplifyMax(*path_geometric);
   const size_t Nstates_after = path_geometric->getStateCount();
   OMPL_DEBUG("Improved solution path from %d states to %d states.", Nstates_before, Nstates_after);
-  for(const auto& state : path_geometric->getStates()) {
-    factor->printState(state);
-  }
-  pdef->addSolutionPath(path);
+  // for(const auto& state : path_geometric->getStates()) {
+  //   factor->printState(state);
+  // }
+  pdef->addSolutionPath(path, false, 0.0, getName());
 }
