@@ -36,7 +36,6 @@
 
 #include "ompl/geometric/planners/rrt/RRTtask.h"
 #include <limits>
-#include "ompl/base/goals/GoalSampleableRegion.h"
 #include "ompl/tools/config/SelfConfig.h"
 #include "ompl/multilevel/datastructures/TaskSpaceMotionValidator.h"
 
@@ -55,10 +54,10 @@ ompl::geometric::RRTtask::RRTtask(const base::SpaceInformationPtr &si, bool addI
 
     addIntermediateStates_ = addIntermediateStates;
     if(dynamic_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator()) != nullptr) {
-      OMPL_ERROR("Using Task Space Capabilities for Planner %s", getName().c_str());
+      OMPL_INFORM("Using Task Space Capabilities for Planner %s", getName().c_str());
         use_task_space_ = true;
     }else {
-      OMPL_ERROR("Not Using Task Space Capabilities for Planner %s", getName().c_str());
+      OMPL_INFORM("Not Using Task Space Capabilities for Planner %s", getName().c_str());
     }
     lastValid.first = si_->allocState();
     xstate = si_->allocState();
@@ -98,6 +97,19 @@ void ompl::geometric::RRTtask::setup()
         nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<Motion *>(this));
     nn_->setDistanceFunction([this](const Motion *a, const Motion *b) { return distanceFunction(a, b); });
     first_run_ = true;
+
+    if (!pdef_)
+    {
+        OMPL_INFORM("%s: problem definition is not set, deferring setup completion...", getName().c_str());
+        setup_ = false;
+    } else {
+      base::Goal *goal = pdef_->getGoal().get();
+      auto *goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
+      if(goal_s ==nullptr) {
+        OMPL_ERROR("Goal is not sampleable.");
+        throw "RequiresSampleableGoal";
+      }
+    }
 }
 
 void ompl::geometric::RRTtask::freeMemory()
@@ -113,6 +125,28 @@ void ompl::geometric::RRTtask::freeMemory()
             delete motion;
         }
     }
+}
+
+bool ompl::geometric::RRTtask::shouldSampleGoal(const ompl::base::GoalSampleableRegion* goal, size_t iteration_counter) {
+  if(goal == nullptr) {
+    OMPL_WARN("Cannot sample goal.");
+    return false;
+  }
+  if(!goal->canSample()) {
+    OMPL_WARN("Cannot sample goal.");
+    return false;
+  }
+  if(!(goalBias_ > 0.0)) {
+    OMPL_WARN("No goal bias.");
+    return false;
+  }
+  if(!(iteration_counter > 0)) {
+    return false;
+  }
+  if(rng_.uniform01() > goalBias_) {
+    return false;
+  }
+  return true;
 }
 
 ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTerminationCondition &ptc)
@@ -134,7 +168,7 @@ ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTer
     }
 
     base::Goal *goal = pdef_->getGoal().get();
-    auto *goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
+    auto *goal_s = static_cast<base::GoalSampleableRegion *>(goal);
 
     if (!sampler_) {
         sampler_ = si_->allocStateSampler();
@@ -153,7 +187,7 @@ ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTer
     while (!ptc)
     {
         /* sample random state (with goal biasing) */
-        if ((goal_s != nullptr) && rng_.uniform01() < goalBias_ && goal_s->canSample())
+        if(shouldSampleGoal(goal_s, iteration_counter_))
         {
             if(debug) {
               OMPL_WARN("Sampling goal");
@@ -167,6 +201,7 @@ ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTer
             }
             sampler_->sampleUniform(rstate);
         }
+        iteration_counter_++;
 
         if(debug) {
           si_->printState(rstate);

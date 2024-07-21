@@ -16,15 +16,15 @@ FibrationRRT::FibrationRRT(const FactoredSpaceInformationPtr &si, float goal_thr
    ompl::base::Planner(si, "FibrationRRT"), goal_threshold_(goal_threshold)
 {
   specs_.recognizedGoal = base::GOAL_SAMPLEABLE_REGION;
-  //specs_.approximateSolutions = true;
+  specs_.approximateSolutions = true;
   specs_.directed = true;
   //specs_.optimizingPaths = false;
 
   //addPlannerProgressProperty("iterations INTEGER", [this] { return getIterationsProperty(); });
   //addPlannerProgressProperty("best cost REAL", [this] { return getBestCostProperty(); });
 
-  Planner::declareParam<double>("range", this, &FibrationRRT::setRange, &FibrationRRT::getRange, "0.:1.:10000.");
-  Planner::declareParam<bool>("smoothIntermediateSolutions", this, &FibrationRRT::setSmoothIntermediateSolutions, &FibrationRRT::getSmoothIntermediateSolutions, "0,1");
+  //Planner::declareParam<double>("range", this, &FibrationRRT::setRange, &FibrationRRT::getRange, "0.:1.:10000.");
+  //Planner::declareParam<bool>("smoothIntermediateSolutions", this, &FibrationRRT::setSmoothIntermediateSolutions, &FibrationRRT::getSmoothIntermediateSolutions, "0,1");
 }
 
 FibrationRRT::~FibrationRRT() {
@@ -54,25 +54,16 @@ void FibrationRRT::setup() {
   Planner::setup();
 }
 
-void FibrationRRT::setSmoothIntermediateSolutions(bool smoothing_enabled) {
-  smoothing_enabled_ = smoothing_enabled;
-}
-
-bool FibrationRRT::getSmoothIntermediateSolutions() const {
-  return smoothing_enabled_;
-}
-
 void FibrationRRT::getPlannerData(base::PlannerData &data) const {
-  const auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
-  auto root_planner = active_planners_.find(root->getName());
-  if(root_planner == active_planners_.end()) {
+  auto si = data.getSpaceInformation();
+  const auto factor = std::static_pointer_cast<FactoredSpaceInformation>(si);
+  auto name = factor->getName();
+  auto planner = active_planners_.find(name);
+  if(planner == active_planners_.end()) {
+    OMPL_ERROR("Could not get planner data for factor %s", name.c_str());
     return;
   }
-  root_planner->second->getPlannerData(data);
-}
-
-const FactoredSpaceInformationPtr& FibrationRRT::getFactoredSpaceInformation() const {
-  return std::static_pointer_cast<FactoredSpaceInformation>(si_);
+  planner->second->getPlannerData(data);
 }
 
 const std::unordered_map<std::string, ompl::base::ProblemDefinitionPtr>& FibrationRRT::getProblemDefinitions() const {
@@ -146,16 +137,12 @@ void FibrationRRT::setSeed(size_t seed) {
   seed_ = seed;
 }
 
-const FactoredSpaceInformationPtr& FibrationRRT::selectFactor_() {
-  if(active_factors_.size() == 1) {
-    return active_factors_.front();
-  }
+const FactoredSpaceInformationPtr& FibrationRRT::selectFactorExponential_() {
   //Exponential importance sampling
   PDF<int> pdf;
 
   for(size_t k = 0; k < active_factors_.size(); k++) {
     auto active_factor = active_factors_.at(k);
-  //for(const auto& active_factor : active_factors_) {
     auto planner_iterator = active_planners_.find(active_factor->getName());
     if(planner_iterator == active_planners_.end()) {
       createPlannerForFactor_(active_factor);
@@ -170,11 +157,44 @@ const FactoredSpaceInformationPtr& FibrationRRT::selectFactor_() {
 
   if (pdf.empty()) {
     OMPL_WARN("Could not construct PDF. Choosing random factor.");
-    int index = rng_.uniformInt(0, active_factors_.size() - 1);
-    return active_factors_.at(index);
+    return selectFactorUniform_();
   }
   auto index = pdf.sample(rng_.uniform01());
   return active_factors_.at(index);
+}
+
+const FactoredSpaceInformationPtr& FibrationRRT::selectFactorUniform_() {
+  int index = rng_.uniformInt(0, active_factors_.size() - 1);
+  return active_factors_.at(index);
+}
+
+const FactoredSpaceInformationPtr& FibrationRRT::selectFactorLastLevel_() {
+  return active_factors_.back();
+}
+
+const FactoredSpaceInformationPtr& FibrationRRT::selectFactor_() {
+  if(active_factors_.size() == 1) {
+    return active_factors_.front();
+  }
+  switch(selector_function_type_) {
+    case SelectorFunctionType::kUniform: {
+      return selectFactorUniform_(); 
+    }
+    case SelectorFunctionType::kExponential: {
+      return selectFactorExponential_(); 
+    }
+    case SelectorFunctionType::kLastLevel: {
+      return selectFactorLastLevel_(); 
+    }
+    default: {
+      OMPL_WARN("No selector function specified. Using uniform.");
+      return selectFactorUniform_(); 
+    }
+  }
+}
+
+void FibrationRRT::setSelectorFunctionType(const SelectorFunctionType& selector_function_type) {
+  selector_function_type_ = selector_function_type;
 }
 
 bool FibrationRRT::hasSolution_(const FactoredSpaceInformationPtr& factor) const {
@@ -252,15 +272,59 @@ std::vector<FactoredPlannerPtr> FibrationRRT::getChildrenPlanner_(const Factored
   return children_planner;
 }
 
-void FibrationRRT::setRange(double range) {
-  range_ = range;
+void FibrationRRT::setSmoothIntermediateSolutions(bool smooth_intermediate_solutions) {
+  auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
+  for(const auto& factor : root->getAllFactors()) {
+    setSmoothIntermediateSolutions(factor->getName(), smooth_intermediate_solutions);
+  }
 }
 
-double FibrationRRT::getRange() const {
-  if(range_.has_value()) {
-    return range_.value();
+void FibrationRRT::setRange(double range) {
+  auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
+  for(const auto& factor : root->getAllFactors()) {
+    setRange(factor->getName(), range);
   }
-  return 0.0f;
+}
+
+void FibrationRRT::setGoalBias(double goal_bias) {
+  auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
+  for(const auto& factor : root->getAllFactors()) {
+    setGoalBias(factor->getName(), goal_bias);
+  }
+}
+
+void FibrationRRT::setSmoothIntermediateSolutions(const std::string& name, bool smooth_intermediate_solutions) {
+  smooth_intermediate_solutions_[name] = smooth_intermediate_solutions;
+}
+
+void FibrationRRT::setRange(const std::string& name, double range) {
+  range_[name] = range;
+}
+
+void FibrationRRT::setGoalBias(const std::string& name, double goal_bias) {
+  goal_bias_[name] = goal_bias;
+}
+
+void FibrationRRT::setPathRestrictionSamplingBias(const std::string& name, double path_restriction_sampling_bias) {
+  path_restriction_sampling_bias_[name] = path_restriction_sampling_bias;
+}
+
+void FibrationRRT::setPathRestrictionSurroundingSamplingBias(const std::string& name, double path_restriction_surrounding_sampling_bias) {
+  path_restriction_surrounding_sampling_bias_[name] = path_restriction_surrounding_sampling_bias;
+}
+
+void FibrationRRT::setSamplingPerturbationBias(const std::string& name, double sampling_perturbation_bias) {
+  sampling_perturbation_bias_[name] = sampling_perturbation_bias;
+}
+
+
+template<typename T>
+std::optional<T> getParameter(const std::string& name, const std::unordered_map<std::string, T>& data) {
+  auto data_iterator = data.find(name);
+  if(data_iterator == data.end()) {
+    return std::nullopt;
+  }
+  return data_iterator->second;
 }
 
 void FibrationRRT::createPlannerForFactor_(const FactoredSpaceInformationPtr& factor) {
@@ -272,9 +336,29 @@ void FibrationRRT::createPlannerForFactor_(const FactoredSpaceInformationPtr& fa
     auto children_planner = getChildrenPlanner_(factor);
     active_planners_[name] = std::make_shared<FactoredPlanner>(factor, children_planner);
   }
-  if(range_.has_value()) {
-    active_planners_[name]->setRange(range_.value());
+
+  //Setting local or global parameter values 
+  auto maybe_range = getParameter(name, range_);
+  if(maybe_range.has_value()) {
+    active_planners_[name]->setRange(maybe_range.value());
   }
+  auto maybe_goal_bias = getParameter(name, goal_bias_);
+  if(maybe_goal_bias.has_value()) {
+    active_planners_[name]->setGoalBias(maybe_goal_bias.value());
+  }
+  auto maybe_path_restriction_sampling_bias_= getParameter(name, path_restriction_sampling_bias_);
+  if(maybe_path_restriction_sampling_bias_.has_value()) {
+    active_planners_[name]->setPathRestrictionSamplingBias(maybe_path_restriction_sampling_bias_.value());
+  }
+  auto maybe_path_restriction_surrounding_sampling_bias_= getParameter(name, path_restriction_surrounding_sampling_bias_);
+  if(maybe_path_restriction_surrounding_sampling_bias_.has_value()) {
+    active_planners_[name]->setPathRestrictionSurroundingSamplingBias(maybe_path_restriction_surrounding_sampling_bias_.value());
+  }
+  auto maybe_sampling_perturbation_bias_= getParameter(name, sampling_perturbation_bias_);
+  if(maybe_sampling_perturbation_bias_.has_value()) {
+    active_planners_[name]->setSamplingPerturbationBias(maybe_sampling_perturbation_bias_.value());
+  }
+
   OMPL_INFORM("Created new planner %s for factor %s", active_planners_[name]->getName().c_str(), name.c_str());
 
   auto iterator = problem_definitions_per_factor_.find(factor->getName());
@@ -415,22 +499,29 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
 
         if(hasSolution_(selectedFactor)) {
           if(!isSolved_(selectedFactor)) {
-            is_solved_[selectedFactor->getName()] = true;
+            const auto& name = selectedFactor->getName();
+            is_solved_[name] = true;
             OMPL_INFORM(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
-            OMPL_INFORM(" >>> Solved factor %s.", selectedFactor->getName().c_str());
+            OMPL_INFORM(" >>> Solved factor %s.", name.c_str());
             OMPL_INFORM(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
 
             if(shouldSmoothSolutionPath(selectedFactor)) {
               smoothSolutionPath(selectedFactor);
             }
+            //DEBUG
+            const auto pgeo = static_pointer_cast<ompl::geometric::PathGeometric>(getProblemDefinition(name)->getSolutionPath());
+            for(const auto& state : pgeo->getStates()) {
+              selectedFactor->printState(state);
+            }
+            //DEBUG
+
 
             if(!selectedFactor->hasParent()) {
-              const auto& name = selectedFactor->getName();
               OMPL_INFORM(" >>>>>> Found solution on root factor %s", name.c_str());
               planner_status_ = base::PlannerStatus::StatusType::EXACT_SOLUTION;
               auto pdef = getProblemDefinition(name);
               auto path = pdef->getSolutionPath();
-              pdef->addSolutionPath(path);
+              pdef_->addSolutionPath(path);
               break;
             }
           }
@@ -465,7 +556,7 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
     OMPL_INFORM(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
     if(pdef_->hasExactSolution()) {
       planner_status_ = base::PlannerStatus::StatusType::EXACT_SOLUTION;
-      const auto pgeo = dynamic_pointer_cast<ompl::geometric::PathGeometric>(pdef_->getSolutionPath());
+      const auto pgeo = static_pointer_cast<ompl::geometric::PathGeometric>(pdef_->getSolutionPath());
       if(pgeo) {
         OMPL_INFORM("Found exact solution of length %f with %d waypoints.", pgeo->length(), pgeo->getStateCount());
       }
@@ -474,14 +565,21 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
 }
 
 bool FibrationRRT::shouldSmoothSolutionPath(const FactoredSpaceInformationPtr& factor) {
-  if(smoothing_enabled_) {
+
+  auto maybe_smooth_intermediate_solution = getParameter(factor->getName(), smooth_intermediate_solutions_);
+  if(!maybe_smooth_intermediate_solution.has_value()) {
+    //Enabled by default
     return true;
   }
-  //Smoothing in higher dimension is often inefficient 
-  if(factor->getStateDimension() > 4) {
-    return false;
-  }
-  return true;
+  return maybe_smooth_intermediate_solution.value();
+  //if(!smoothing_enabled_) {
+  //  return false;
+  //}
+  ////Smoothing in higher dimension is often inefficient 
+  //if(factor->getStateDimension() > 4) {
+  //  return false;
+  //}
+  //return true;
 }
 
 void FibrationRRT::smoothSolutionPath(const FactoredSpaceInformationPtr& factor) {

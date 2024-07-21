@@ -20,6 +20,30 @@ ompl::base::PlannerStatus FactoredPlanner::solve(const ompl::base::PlannerTermin
   return BaseTypePlanner::solve(ptc);
 }
 
+void FactoredPlanner::setPathRestrictionSamplingBias(double path_restriction_sampling_bias) {
+  path_restriction_sampling_bias_ = path_restriction_sampling_bias;
+}
+
+double FactoredPlanner::getPathRestrictionSamplingBias() const {
+  return path_restriction_sampling_bias_;
+}
+
+void FactoredPlanner::setPathRestrictionSurroundingSamplingBias(double path_restriction_surrounding_sampling_bias) {
+  path_restriction_surrounding_sampling_bias_ = path_restriction_surrounding_sampling_bias;
+}
+
+double FactoredPlanner::getPathRestrictionSurroundingSamplingBias() const {
+  return path_restriction_surrounding_sampling_bias_;
+}
+
+void FactoredPlanner::setSamplingPerturbationBias(double sampling_perturbation_bias) {
+  sampling_perturbation_bias_ = sampling_perturbation_bias;
+}
+
+double FactoredPlanner::getSamplingPerturbationBias() const {
+  return sampling_perturbation_bias_;
+}
+
 void FactoredPlanner::setSeed(size_t seed) 
 {
   ompl::RNG::setSeed(seed);
@@ -89,14 +113,17 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
     }
 
     //Path restriction sampling
-    if(rng_.uniform01() < kPathRestrictionSamplingBias) {
-      const auto path = pdef->getSolutionPath()->as<geometric::PathGeometric>();
-      const std::vector<base::State *>& path_states = path->getStates();
-      sampleFromPath(path_states, state);
-      sampler->sampleUniformNear(state, state, kPathRestrictionSurroundingBias);
-      return;
+    if(path_restriction_sampling_bias_ > 0.0) {
+      if(path_restriction_sampling_bias_ >= 1.0 || rng_.uniform01() < path_restriction_sampling_bias_) {
+        const auto path = pdef->getSolutionPath()->as<geometric::PathGeometric>();
+        const std::vector<base::State *>& path_states = path->getStates();
+        sampleFromPath(path_states, state);
+        if(path_restriction_surrounding_sampling_bias_ > 0.0) {
+          sampler->sampleUniformNear(state, state, path_restriction_surrounding_sampling_bias_);
+        }
+        return;
+      }
     }
-    //TODO: add goal sampling
 
     //Tree restriction sampling (vertex version). RRTConnect.
     //const size_t N = tStart_->size() + tGoal_->size();
@@ -135,5 +162,5 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
     // si_->printState(state);
 
     //Randomly perturbate state
-    sampler->sampleUniformNear(state, state, kSamplingPerturbationValue);
+    sampler->sampleUniformNear(state, state, sampling_perturbation_bias_);
 }

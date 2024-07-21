@@ -76,6 +76,7 @@ namespace ompl
 
             /* \brief Get explicit fiber space representation */
             virtual ompl::base::StateSpacePtr getFiberSpace() const;
+            ompl::base::StateSpacePtr getFiber() const;
 
             /* \brief Get explicit fiber space sampler */
             ompl::base::StateSamplerPtr getFiberSamplerPtr() const;

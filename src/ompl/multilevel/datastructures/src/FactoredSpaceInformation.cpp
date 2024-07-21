@@ -503,3 +503,6 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
     parent->freeChildStates(child_states);
   }
 }
+
+void FactoredSpaceInformation::interpolate(const base::State *from, const base::State *to, double t, base::State *state) const {
+}

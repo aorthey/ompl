@@ -39,6 +39,7 @@
 
 #include "ompl/datastructures/NearestNeighbors.h"
 #include "ompl/geometric/planners/PlannerIncludes.h"
+#include "ompl/base/goals/GoalSampleableRegion.h"
 
 namespace ompl
 {
@@ -171,6 +172,7 @@ namespace ompl
             {
                 return si_->distance(a->state, b->state);
             }
+            bool shouldSampleGoal(const ompl::base::GoalSampleableRegion* goal, size_t iteration_counter);
 
             /** \brief State sampler */
             base::StateSamplerPtr sampler_;
@@ -180,7 +182,8 @@ namespace ompl
 
             /** \brief The fraction of time the goal is picked as the state to expand towards (if such a state is
              * available) */
-            double goalBias_{.25}; //was 0.05
+            double goalBias_{.05}; //was 0.05
+            size_t iteration_counter_{0};
 
             /** \brief The maximum length of a motion to be added to a tree */
             double maxDistance_{0.};

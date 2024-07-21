@@ -11,6 +11,12 @@ namespace ompl
 {
     namespace multilevel
     {
+        enum class SelectorFunctionType {
+          kUniform = 0,
+          kExponential = 1,
+          kLastLevel = 2
+        };
+
         OMPL_CLASS_FORWARD(FibrationRRT);
         OMPL_CLASS_FORWARD(FactoredSpaceInformation);
         OMPL_CLASS_FORWARD(FactoredPlanner);
@@ -39,22 +45,32 @@ namespace ompl
             void setProblemDefinition(const base::ProblemDefinitionPtr &pdef) override;
             void getPlannerData(base::PlannerData &data) const override;
 
+            void setSelectorFunctionType(const SelectorFunctionType& selector_function_type);
+
             const std::unordered_map<std::string, base::ProblemDefinitionPtr>& getProblemDefinitions() const;
             const std::unordered_map<std::string, base::PlannerStatus>& getPlannerStatus() const;
+
             base::ProblemDefinitionPtr getProblemDefinition(const std::string& name) const;
 
-            const FactoredSpaceInformationPtr& getFactoredSpaceInformation() const;
+            //const FactoredSpaceInformationPtr& getFactoredSpaceInformation() const;
 
             std::string getIterationsProperty() const;
             std::string getBestCostProperty() const;
 
-            void setRange(double range);
-            double getRange() const;
-
             size_t numFactors() const;
 
-            void setSmoothIntermediateSolutions(bool smoothing_enabled = true);
-            bool getSmoothIntermediateSolutions() const;
+            //Parameters for individual planners
+            void setRange(double range);
+            void setGoalBias(double goal_bias);
+            void setSmoothIntermediateSolutions(bool smooth_intermediate_solutions = true);
+
+            void setSmoothIntermediateSolutions(const std::string& name, bool smooth_intermediate_solutions = true);
+            void setRange(const std::string& name, double range);
+            void setGoalBias(const std::string& name, double goal_bias);
+            void setPathRestrictionSamplingBias(const std::string& name, double path_restriction_sampling_bias);
+            void setPathRestrictionSurroundingSamplingBias(const std::string& name, double path_restriction_surrounding_sampling_bias);
+            void setSamplingPerturbationBias(const std::string& name, double sampling_perturbation_bias);
+
 
           protected:
             bool shouldSmoothSolutionPath(const FactoredSpaceInformationPtr& factor);
@@ -62,7 +78,12 @@ namespace ompl
 
             void grow_(const FactoredSpaceInformationPtr& factor);
             bool hasSolution_(const FactoredSpaceInformationPtr& factor) const;
+
             const FactoredSpaceInformationPtr& selectFactor_();
+            const FactoredSpaceInformationPtr& selectFactorExponential_();
+            const FactoredSpaceInformationPtr& selectFactorUniform_();
+            const FactoredSpaceInformationPtr& selectFactorLastLevel_();
+
             void createPlannerForFactor_(const FactoredSpaceInformationPtr& factor);
 
             bool isActive_(const FactoredSpaceInformationPtr& factor) const;
@@ -86,13 +107,23 @@ namespace ompl
             std::unordered_map<std::string, base::ProblemDefinitionPtr> problem_definitions_per_factor_;
             std::unordered_map<std::string, base::PlannerStatus> planner_status_per_factor_;
 
+            //Parameters per planner
+            std::unordered_map<std::string, double> range_;
+            std::unordered_map<std::string, double> goal_bias_;
+            std::unordered_map<std::string, double> path_restriction_sampling_bias_;
+            std::unordered_map<std::string, double> path_restriction_surrounding_sampling_bias_;
+            std::unordered_map<std::string, double> sampling_perturbation_bias_;
+            std::unordered_map<std::string, bool> smooth_intermediate_solutions_;
+
             base::PlannerStatus planner_status_;
 
             unsigned int iterations_{0};
             float bestCost_{std::numeric_limits<float>::infinity()};
-            std::optional<double> range_;
-            bool smoothing_enabled_{false};
+            std::optional<double> global_range_;
+            //bool smoothing_enabled_{false};
             float goal_threshold_{kGlobalGoalTreshold};
+
+            SelectorFunctionType selector_function_type_{SelectorFunctionType::kExponential};
         };
 
     }

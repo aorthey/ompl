@@ -22,6 +22,10 @@ ompl::base::StateSpacePtr FiberedProjection::getFiberSpace() const
     return fiberSpace_;
 }
 
+ompl::base::StateSpacePtr FiberedProjection::getFiber() const {
+    return getFiberSpace();
+}
+
 bool FiberedProjection::isFibered() const
 {
     return true;
