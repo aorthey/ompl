@@ -36,9 +36,11 @@
 
 /* Author: Andreas Orthey */
 
-#ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_PATH_SECTION__
-#define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_PATH_SECTION__
-#include <ompl/multilevel/datastructures/BundleSpaceGraph.h>
+#ifndef OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_PATH_SECTION__
+#define OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_PATH_SECTION__
+
+#include <ompl/multilevel/datastructures/Projection.h>
+#include <ompl/multilevel/datastructures/pathrestriction/FindSectionTypes.h>
 #include <ompl/util/ClassForward.h>
 
 namespace ompl
@@ -60,39 +62,11 @@ namespace ompl
         class PathSection
         {
         public:
-            using Configuration = ompl::multilevel::BundleSpaceGraph::Configuration;
-
             PathSection() = delete;
-            PathSection(PathRestriction *);
+            PathSection(const PathRestrictionPtr&);
             virtual ~PathSection();
 
-            /** \brief Interpolate along restriction using L2 metric
-              *  ---------------
-              *            ____x
-              *       ____/
-              *   ___/
-              *  x
-              *  --------------- */
-            void interpolateL2(HeadPtr &);
-
-            /** \brief Interpolate along restriction using L1 metric
-              * (Fiber first)
-              *   ---------------
-              *    _____________x
-              *   |
-              *   |
-              *   x
-              *   --------------- */
-            void interpolateL1FiberFirst(HeadPtr &);
-
-            /** \brief Interpolate along restriction using L1 metric (Fiber Last)
-              *   ---------------
-              *                 x
-              *                 |
-              *                 |
-              *   x_____________|
-              *   --------------- */
-            void interpolateL1FiberLast(HeadPtr &);
+            std::vector<base::State*> getStates() const;
 
             /** \brief Checks if section is feasible
              *
@@ -106,26 +80,38 @@ namespace ompl
             void sanityCheck(HeadPtr &);
 
             /** \brief Methods to access sections like std::vector */
-            base::State *at(int k) const;
-            const base::State *back() const;
-            const base::State *front() const;
+            const base::State* at(int k) const;
+            const base::State* back() const;
+            const base::State* front() const;
+
+            base::State* atNonConst(int k) const;
+            base::State* backNonConst() const;
+            base::State* frontNonConst() const;
+
             unsigned int size() const;
+            void resize(unsigned int);
 
             /** \brief Add vertex for sNext and edge to xLast by assuming motion
              * is valid  */
-            Configuration *addFeasibleSegment(Configuration *xLast, base::State *sNext);
+            //Configuration *addFeasibleSegment(Configuration *xLast, base::State *sNext);
+            void addEdgeToSection(base::State* xLast, base::State* xNext);
 
-            void addFeasibleGoalSegment(Configuration *xLast, Configuration *xGoal);
+            void AddBaseStateIndex(const int);
+        //sectionBaseStateIndices_.push_back(head->getBaseStateIndexAt(0));
+
+            //void addFeasibleGoalSegment(Configuration *xLast, Configuration *xGoal);
 
             friend std::ostream &operator<<(std::ostream &, const PathSection &);
 
             void print(std::ostream &) const;
 
         protected:
-            PathRestriction *restriction_;
+            PathRestrictionPtr restriction_;
 
             /** \brief Interpolated section along restriction */
-            std::vector<base::State *> section_;
+            std::vector<base::State *> section_states_;
+
+            std::vector<std::pair<base::State*, base::State*>> edges_on_section_;
 
             std::vector<int> sectionBaseStateIndices_;
 

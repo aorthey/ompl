@@ -141,6 +141,7 @@ namespace ompl
             void setup() override;
 
         protected:
+
             /** \brief Representation of a motion
 
                 This only contains pointers to parent motions as we
@@ -164,6 +165,8 @@ namespace ompl
                 Motion *parent{nullptr};
             };
 
+            ompl::geometric::RRTtask::Motion* AddConfigAndParent(const ompl::base::State* state, Motion* parent);
+
             /** \brief Free the memory allocated by this planner */
             void freeMemory();
 
@@ -179,6 +182,8 @@ namespace ompl
 
             /** \brief A nearest-neighbors datastructure containing the tree of motions */
             std::shared_ptr<NearestNeighbors<Motion *>> nn_;
+
+            std::vector<Motion*> nodes_;
 
             /** \brief The fraction of time the goal is picked as the state to expand towards (if such a state is
              * available) */

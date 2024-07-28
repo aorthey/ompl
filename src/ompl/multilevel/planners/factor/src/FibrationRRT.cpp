@@ -12,9 +12,8 @@
 
 using namespace ompl::multilevel;
 
-FibrationRRT::FibrationRRT(const FactoredSpaceInformationPtr &si, float goal_threshold) :
-   ompl::base::Planner(si, "FibrationRRT"), goal_threshold_(goal_threshold)
-{
+FibrationRRT::FibrationRRT(const ompl::base::SpaceInformationPtr &si, float goal_threshold) :
+  ompl::base::Planner(si, "FibrationRRT"), goal_threshold_(goal_threshold) {
   specs_.recognizedGoal = base::GOAL_SAMPLEABLE_REGION;
   specs_.approximateSolutions = true;
   specs_.directed = true;
@@ -25,6 +24,10 @@ FibrationRRT::FibrationRRT(const FactoredSpaceInformationPtr &si, float goal_thr
 
   //Planner::declareParam<double>("range", this, &FibrationRRT::setRange, &FibrationRRT::getRange, "0.:1.:10000.");
   //Planner::declareParam<bool>("smoothIntermediateSolutions", this, &FibrationRRT::setSmoothIntermediateSolutions, &FibrationRRT::getSmoothIntermediateSolutions, "0,1");
+}
+
+FibrationRRT::FibrationRRT(const FactoredSpaceInformationPtr &factor, float goal_threshold) :
+   FibrationRRT(static_pointer_cast<ompl::base::SpaceInformation>(factor), goal_threshold) {
 }
 
 FibrationRRT::~FibrationRRT() {
@@ -78,9 +81,18 @@ ompl::base::ProblemDefinitionPtr FibrationRRT::getProblemDefinition(const std::s
   auto pdef_iterator = problem_definitions_per_factor_.find(name);
   if(pdef_iterator == problem_definitions_per_factor_.end()) {
     OMPL_ERROR("Could not get problem definition for factor %s", name.c_str());
-    throw "NotFound";
+    throw ompl::Exception("NotFound");
   }
   return pdef_iterator->second;
+}
+
+FactoredPlannerPtr FibrationRRT::getPlanner(const std::string& name) const {
+  auto planner_iterator = active_planners_.find(name);
+  if(planner_iterator == active_planners_.end()) {
+    OMPL_ERROR("Could not get planner for factor %s", name.c_str());
+    throw ompl::Exception("NotFound");
+  }
+  return planner_iterator->second;
 }
 
 bool FibrationRRT::hasValidProblemDefinition_(const FactoredSpaceInformationPtr& factor) const {
@@ -91,6 +103,7 @@ bool FibrationRRT::hasValidProblemDefinition_(const FactoredSpaceInformationPtr&
   }
   const auto& pdef = pdef_iterator->second;
   if(pdef->getStartStateCount() <= 0) {
+    OMPL_ERROR("No start states available in ProblemDefinition.");
     return false;
   }
   bool has_valid_start = false;
@@ -476,6 +489,7 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
       is_active_.insert({factor->getName(), true});
       is_solved_.insert({factor->getName(), false});
       if(!hasValidProblemDefinition_(factor)) {
+        OMPL_ERROR("Factor %s has no valid problem definition.", factor->getName().c_str());
         return base::PlannerStatus::INVALID_START;
       }
     }
@@ -509,10 +523,10 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
               smoothSolutionPath(selectedFactor);
             }
             //DEBUG
-            const auto pgeo = static_pointer_cast<ompl::geometric::PathGeometric>(getProblemDefinition(name)->getSolutionPath());
-            for(const auto& state : pgeo->getStates()) {
-              selectedFactor->printState(state);
-            }
+            // const auto pgeo = static_pointer_cast<ompl::geometric::PathGeometric>(getProblemDefinition(name)->getSolutionPath());
+            // for(const auto& state : pgeo->getStates()) {
+            //   selectedFactor->printState(state);
+            // }
             //DEBUG
 
 
@@ -572,14 +586,6 @@ bool FibrationRRT::shouldSmoothSolutionPath(const FactoredSpaceInformationPtr& f
     return true;
   }
   return maybe_smooth_intermediate_solution.value();
-  //if(!smoothing_enabled_) {
-  //  return false;
-  //}
-  ////Smoothing in higher dimension is often inefficient 
-  //if(factor->getStateDimension() > 4) {
-  //  return false;
-  //}
-  //return true;
 }
 
 void FibrationRRT::smoothSolutionPath(const FactoredSpaceInformationPtr& factor) {

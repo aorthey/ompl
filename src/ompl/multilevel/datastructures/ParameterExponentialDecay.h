@@ -42,6 +42,8 @@
 #include <ompl/util/Exception.h>
 #include <ompl/multilevel/datastructures/Parameter.h>
 
+#include <cmath>
+
 namespace ompl
 {
     /**  \brief ParameterExponentialDecay represents a smooth interpolation between two
@@ -74,7 +76,7 @@ namespace ompl
         {
             if (lambda < 0)
             {
-                throw ompl::Exception("ExponentialDecay requires non-negative lambda");
+                throw Exception("ExponentialDecay requires non-negative lambda");
             }
             else
             {

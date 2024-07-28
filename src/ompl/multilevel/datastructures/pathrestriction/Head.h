@@ -36,19 +36,17 @@
 
 /* Author: Andreas Orthey */
 
-#ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_PATH_RESTRICTION_BASEPATHHEAD__
-#define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_PATH_RESTRICTION_BASEPATHHEAD__
-#include <ompl/multilevel/datastructures/BundleSpaceGraph.h>
+#ifndef OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_HEAD_
+#define OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_HEAD_
+
+#include <ompl/multilevel/datastructures/pathrestriction/PathRestriction.h>
 
 namespace ompl
 {
     namespace multilevel
     {
-        OMPL_CLASS_FORWARD(BundleSpaceGraph);
         OMPL_CLASS_FORWARD(PathRestriction);
         OMPL_CLASS_FORWARD(FiberedProjection);
-
-        using Configuration = ompl::multilevel::BundleSpaceGraph::Configuration;
 
         /** \brief A pointer to a specific location on the base path of the path
          * restriction
@@ -63,41 +61,41 @@ namespace ompl
         class Head
         {
         public:
-            Head(PathRestriction *restriction, Configuration *const xCurrent, Configuration *const xTarget);
+            Head(const PathRestrictionPtr& restriction, const base::State* xCurrent, const base::State* xTarget);
 
             Head(const Head &rhs);
 
             ~Head();
 
             /** \brief Get state to which head points */
-            const base::State *getState() const;
+            base::State* getState() const;
+
             /** \brief Get projection of state onto fiber space */
-            const base::State *getStateFiber() const;
+            const base::State* getStateFiber() const;
             /** \brief Get projection of state onto base space */
-            const base::State *getStateBase() const;
+            const base::State* getStateBase() const;
 
             /** \brief Get projection of state onto fiber space (non const)*/
             base::State *getStateFiberNonConst() const;
             /** \brief Get projection of state onto base space (non const)*/
             base::State *getStateBaseNonConst() const;
-            /** \brief Get state as configuration */
-            Configuration *getConfiguration() const;
 
-            /** \brief Setter for current configuration/state */
-            void setCurrent(Configuration *, double);
+            /** \brief Setter for current state */
+            void setCurrent(const base::State *, double);
 
-            /** \brief Get target configuration */
-            Configuration *getTargetConfiguration() const;
-            /** \brief Get target configuration projected onto fiber */
+            /** \brief Get target state */
+            base::State *getTargetState() const;
+
+            /** \brief Get target state projected onto fiber */
             const base::State *getStateTargetFiber() const;
-            /** \brief Get target configuration projected onto fiber (non const)*/
+            /** \brief Get target state projected onto fiber (non const)*/
             base::State *getStateTargetFiberNonConst() const;
 
             /** \brief Remaining discrete states starting at head
              * (including head) and relative to the head */
             int getNumberOfRemainingStates();
 
-            /** \brief Get target configuration projected onto fiber (non const)*/
+            /** \brief Get target state projected onto fiber (non const)*/
             const base::State *getBaseStateAt(int k) const;
             /** \brief Get base state at base path index */
             int getBaseStateIndexAt(int k) const;
@@ -119,19 +117,19 @@ namespace ompl
             void print(std::ostream &) const;
 
             /** \brief Get underlying path restriction. */
-            PathRestriction *getRestriction() const;
+            PathRestrictionPtr getRestriction() const;
 
         private:
             double locationOnBasePath_{0.0};
             int lastValidIndexOnBasePath_{0};
 
-            PathRestriction *restriction_{nullptr};
+            PathRestrictionPtr restriction_{nullptr};
 
-            Configuration *xCurrent_{nullptr};
+            base::State *xCurrent_{nullptr};
             base::State *xBaseCurrent_{nullptr};
             base::State *xFiberCurrent_{nullptr};
 
-            Configuration *xTarget_{nullptr};
+            base::State *xTarget_{nullptr};
             base::State *xFiberTarget_{nullptr};
         };
     }

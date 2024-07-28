@@ -1,13 +1,21 @@
 #include "ompl/multilevel/planners/factor/FactoredPlanner.h"
 #include "ompl/multilevel/planners/factor/RestrictionSampler.h"
 #include "ompl/multilevel/datastructures/FactoredSpaceInformation.h"
+#include <ompl/multilevel/datastructures/pathrestriction/PathRestriction.h>
+#include <ompl/multilevel/datastructures/pathrestriction/PathSection.h>
+#include <ompl/multilevel/datastructures/pathrestriction/FindSectionSideStep.h>
+
+#include <string>
 
 using namespace ompl::multilevel;
 
 FactoredPlanner::FactoredPlanner(const FactoredSpaceInformationPtr& si, const std::vector<FactoredPlannerPtr>& children_planner) 
-  : BaseTypePlanner(si, false)
+  : BaseTypePlanner(si, false), children_planner_(children_planner)
 {
   setName("PlannerOn" + si->getName());
+
+  internal_space_sampler_ = si_->allocStateSampler();
+
   if(!children_planner.empty()) 
   {
     sampler_ = std::make_shared<RestrictionSampler>(si, children_planner);
@@ -15,9 +23,101 @@ FactoredPlanner::FactoredPlanner(const FactoredSpaceInformationPtr& si, const st
   setIntermediateStates(false);
 }
 
+ompl::base::State* FactoredPlanner::MakeStartState() const {
+  auto state = getProblemDefinition()->getStartState(0);
+  return state;
+}
+
+ompl::base::State* FactoredPlanner::MakeGoalState() const {
+  base::Goal *goal = getProblemDefinition()->getGoal().get();
+  auto *goal_s = static_cast<base::GoalSampleableRegion *>(goal);
+  auto state = getSpaceInformation()->allocState();
+  goal_s->sampleGoal(state);
+  return state;
+}
+
+Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
+  auto factor = std::static_pointer_cast<FactoredSpaceInformation>(si_);
+  if (!factor->hasChildren()) 
+  {
+    return failure("Factor has no children.");
+  }
+    
+  auto children = factor->getChildren();
+  if (children.size() == 0)
+  {
+    return failure("Factor has no children.");
+  }
+
+  if (children.size() != 1)
+  {
+    return failure("Factor has more than 1 child. NYI.");
+  }
+  if (children_planner_.size() != 1)
+  {
+    return failure("Children planners has more than 1 child. NYI.");
+  }
+
+  auto child = children.front();
+
+  auto projection = child->getProjection();
+  if (projection == nullptr)
+  {
+    return failure("Child has no projection.");
+  }
+
+  if(!projection->isFibered())
+  {
+    return failure("Projection is not fibered.");
+  }
+
+  auto child_planner = children_planner_.front();
+  const auto& pdef = child_planner->getProblemDefinition();
+  if(!pdef->hasSolution()) 
+  {
+    return failure("Base space has no solution.");
+  }
+
+  const auto base_path = pdef->getSolutionPath();
+
+  auto path_restriction = std::make_shared<PathRestriction>(factor, projection);
+  path_restriction->setBasePath(base_path);
+
+  auto find_section = std::make_shared<FindSectionSideStep>(path_restriction);
+
+  auto qStart = MakeStartState();
+  auto qGoal = MakeGoalState();
+
+  ompl::time::point tStart = ompl::time::now();
+  auto maybe_section = find_section->solve(qStart, qGoal);
+  ompl::time::point tEnd = ompl::time::now();
+
+  if(!maybe_section.has_value()) {
+    return failure("Timeout after " + std::to_string(ompl::time::seconds(tEnd - tStart)) + "s");
+  }
+
+  auto section = maybe_section.value();
+  OMPL_WARN("Found section with %d states.", section->size());
+  for(const auto& state : section->getStates()) {
+    factor->printState(state);
+  }
+  return success(maybe_section.value());
+}
+
 ompl::base::PlannerStatus FactoredPlanner::solve(const ompl::base::PlannerTerminationCondition &ptc) 
 {
+  if(firstRun_) {
+    firstRun_ = false;
+    auto maybe_section = solveSection();
+    if(!maybe_section.has_value()) {
+      OMPL_WARN("No valid section found. Reason: %s", maybe_section.error().c_str());
+    }
+  }
   return BaseTypePlanner::solve(ptc);
+}
+
+void FactoredPlanner::clear() {
+  firstRun_ = false;
 }
 
 void FactoredPlanner::setPathRestrictionSamplingBias(double path_restriction_sampling_bias) {
@@ -96,30 +196,26 @@ void FactoredPlanner::sampleFromPath(const std::vector<base::State *>& path_stat
 }
 
 size_t FactoredPlanner::getNumberOfSamples() const {
-  if(!nn_) {
-    return 0;
-  }
-  return nn_->size();
+  return nodes_.size();
 }
 
 void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state) 
 {
-    const auto sampler = si_->allocStateSampler();
-    const auto& pdef = getProblemDefinition();
-    if(!pdef->hasSolution()) 
-    {
-      OMPL_ERROR("Cannot sample from space without a solution.");
-      return;
-    }
 
     //Path restriction sampling
     if(path_restriction_sampling_bias_ > 0.0) {
       if(path_restriction_sampling_bias_ >= 1.0 || rng_.uniform01() < path_restriction_sampling_bias_) {
+        const auto& pdef = getProblemDefinition();
+        if(!pdef->hasSolution()) 
+        {
+          OMPL_ERROR("Cannot sample from space without a solution.");
+          return;
+        }
         const auto path = pdef->getSolutionPath()->as<geometric::PathGeometric>();
         const std::vector<base::State *>& path_states = path->getStates();
         sampleFromPath(path_states, state);
         if(path_restriction_surrounding_sampling_bias_ > 0.0) {
-          sampler->sampleUniformNear(state, state, path_restriction_surrounding_sampling_bias_);
+          internal_space_sampler_->sampleUniformNear(state, state, path_restriction_surrounding_sampling_bias_);
         }
         return;
       }
@@ -142,25 +238,25 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
     //}
 
     //Tree restriction sampling (vertex version). RRT style
-    std::vector<Motion*> data;
-    nn_->list(data);
-
-    const size_t N = nn_->size();
+    const size_t N = nodes_.size();
     const size_t R = rng_.uniformInt(0, N-1);
-    const auto random_config = data.at(R);
+    si_->getStateSpace()->copyState(state, nodes_.at(R)->state);
 
-    if(random_config->parent == nullptr) {
-      si_->copyState(state, random_config->state);
-      return;
+    //if(random_config->parent == nullptr) {
+    //  si_->copyState(state, random_config->state);
+    //  return;
+    //}
+
+    //const double t = rng_.uniform01();
+    //const auto random_state = random_config->state;
+    //const auto parent_state = random_config->parent->state;
+    //si_->getStateSpace()->interpolate(parent_state, random_state, t, state);
+    //// OMPL_WARN("Sample state");
+    //// si_->printState(state);
+
+    ////Randomly perturbate state
+    if(sampling_perturbation_bias_ > 0.0) {
+      internal_space_sampler_->sampleUniformNear(state, state, sampling_perturbation_bias_);
     }
 
-    const double t = rng_.uniform01();
-    const auto random_state = random_config->state;
-    const auto parent_state = random_config->parent->state;
-    si_->getStateSpace()->interpolate(parent_state, random_state, t, state);
-    // OMPL_WARN("Sample state");
-    // si_->printState(state);
-
-    //Randomly perturbate state
-    sampler->sampleUniformNear(state, state, sampling_perturbation_bias_);
 }

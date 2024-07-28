@@ -10,8 +10,7 @@
 #include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 
-#include <ompl/multilevel/planners/qrrt/QRRT.h>
-#include <ompl/multilevel/planners/qmp/QMP.h>
+#include <ompl/multilevel/planners/factor/FibrationRRT.h>
 #include <ompl/multilevel/datastructures/Projection.h>
 #include <ompl/multilevel/datastructures/projections/RN_RM.h>
 
@@ -91,7 +90,7 @@ BOOST_AUTO_TEST_CASE(Projections_Custom)
     projVec.push_back(projAB);
     siVec.push_back(total_space_si);
 
-    auto planner = std::make_shared<ompl::multilevel::QRRT>(siVec, projVec);
+    auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(siVec, projVec);
 
     // #########################################################################
     // ## Set start state

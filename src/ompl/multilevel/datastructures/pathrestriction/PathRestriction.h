@@ -36,9 +36,14 @@
 
 /* Author: Andreas Orthey */
 
-#ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_PATH_RESTRICTION__
-#define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_PATH_RESTRICTION__
-#include <ompl/multilevel/datastructures/BundleSpaceGraph.h>
+#ifndef OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_PATH_RESTRICTION__
+#define OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_PATH_RESTRICTION__
+
+#include <ompl/multilevel/datastructures/Projection.h>
+#include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
+#include <ompl/multilevel/datastructures/pathrestriction/FindSectionTypes.h>
+
+#include <optional>
 
 namespace ompl
 {
@@ -59,8 +64,6 @@ namespace ompl
     namespace multilevel
     {
         /// @cond IGNORE
-        /** \brief Forward declaration of ompl::multilevel::BundleSpaceGraph */
-        OMPL_CLASS_FORWARD(BundleSpaceGraph);
         /** \brief Forward declaration of ompl::multilevel::PathSection */
         OMPL_CLASS_FORWARD(PathSection);
         /** \brief Forward declaration of ompl::multilevel::Head */
@@ -68,8 +71,6 @@ namespace ompl
         /** \brief Forward declaration of ompl::multilevel::FindSection */
         OMPL_CLASS_FORWARD(FindSection);
         /// @endcond
-
-        using Configuration = ompl::multilevel::BundleSpaceGraph::Configuration;
 
         /** \brief Representation of path restriction
             (union of fibers over a base path).
@@ -82,7 +83,7 @@ namespace ompl
 
             To use this class, you need to set a base path (setBasePath), then
             you can search for sections over this base path (using
-            hasFeasibleSection). Internally, this calls the FindSection
+            computeFeasibleSection). Internally, this calls the FindSection
             algorithm, which can be changed in Constructor method. Please see
             the class ompl::multilevel::FindSection for details on finding
             feasible sections.
@@ -99,7 +100,7 @@ namespace ompl
         {
         public:
             PathRestriction() = delete;
-            PathRestriction(BundleSpaceGraph *);
+            PathRestriction(const FactoredSpaceInformationPtr& factor, const ProjectionPtr& projection);
 
             virtual ~PathRestriction();
 
@@ -112,21 +113,20 @@ namespace ompl
             void setBasePath(std::vector<base::State *>);
 
             /** \brief Return discrete states representation of base path */
-            const std::vector<base::State *> &getBasePath() const;
+            const std::vector<base::State *>& getBasePath() const;
 
             /** \brief Choose algorithm to find sections over restriction */
             void setFindSectionStrategy(FindSectionType type);
 
-            /** \brief Check if feasible section exists between xStart and xGoal.
-             *
-             * NOTE:
-             *  "const ptr*" means that the pointer itself is const
-             *  "ptr* const" means that the content of the pointer is const (but ptr
-             *  can change) */
-            bool hasFeasibleSection(Configuration *const, Configuration *const);
+            /** \brief Compute a feasible section (if possible) between xStart and xGoal.
+             * */
+            std::optional<PathSectionPtr> computeFeasibleSection(const ompl::base::State* start, const ompl::base::State* target);
 
-            /** \brief Return pointer to underlying bundle space graph */
-            BundleSpaceGraph *getBundleSpaceGraph();
+            /** \brief Return pointer to underlying projection */
+            ProjectionPtr getProjection() const;
+
+            /** \brief Return pointer to underlying bundle space */
+            FactoredSpaceInformationPtr getSpaceInformation() const;
 
             /** \brief Length of base path */
             double getLengthBasePath() const;
@@ -156,8 +156,11 @@ namespace ompl
             virtual void print(std::ostream &) const;
 
         protected:
-            /** \brief Pointer to associated bundle space */
-            BundleSpaceGraph *bundleSpaceGraph_;
+            /** \brief Pointer to associated state space */
+            FactoredSpaceInformationPtr factor_;
+
+            /** \brief Pointer to associated projection */
+            ProjectionPtr projection_;
 
             /** \brief Base path over which we define the restriction */
             std::vector<base::State *> basePath_;

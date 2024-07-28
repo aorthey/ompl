@@ -83,6 +83,7 @@ void ompl::geometric::RRTtask::clear()
     freeMemory();
     if (nn_)
         nn_->clear();
+    nodes_.clear();
     lastGoalMotion_ = nullptr;
     first_run_ = true;
 }
@@ -149,6 +150,15 @@ bool ompl::geometric::RRTtask::shouldSampleGoal(const ompl::base::GoalSampleable
   return true;
 }
 
+ompl::geometric::RRTtask::Motion* ompl::geometric::RRTtask::AddConfigAndParent(const ompl::base::State* state, ompl::geometric::RRTtask::Motion* parent) {
+  auto *motion = new Motion(si_);
+  si_->copyState(motion->state, state);
+  motion->parent = parent;
+  nn_->add(motion);
+  nodes_.push_back(motion);
+  return motion;
+}
+
 ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTerminationCondition &ptc)
 {
     if(first_run_) {
@@ -156,9 +166,10 @@ ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTer
       checkValidity();
       while (const base::State *st = pis_.nextStart())
       {
-          auto *motion = new Motion(si_);
-          si_->copyState(motion->state, st);
-          nn_->add(motion);
+          // auto *motion = new Motion(si_);
+          // si_->copyState(motion->state, st);
+          // nn_->add(motion);
+          AddConfigAndParent(st, nullptr);
       }
       if (nn_->size() == 0)
       {
@@ -233,11 +244,12 @@ ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTer
 
           for (std::size_t i = 1; i < states.size(); ++i)
           {
-              auto *motion = new Motion;
-              motion->state = states[i]; motion->parent = nmotion;
-              nn_->add(motion);
+              // auto *motion = new Motion;
+              // motion->state = states[i]; motion->parent = nmotion;
+              // nn_->add(motion);
+              nmotion = AddConfigAndParent(states[i], nmotion);
 
-              nmotion = motion;
+              //nmotion = motion;
           }
           if(debug) {
             OMPL_DEBUG("Reached new state:");
@@ -277,12 +289,13 @@ ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTer
               // if(!reached) {
               //   dstate = lastValid.first;
               // }
-              auto *motion = new Motion(si_);
-              si_->copyState(motion->state, dstate);
-              motion->parent = nmotion;
-              nn_->add(motion);
+              // auto *motion = new Motion(si_);
+              // si_->copyState(motion->state, dstate);
+              // motion->parent = nmotion;
+              // nn_->add(motion);
+              nmotion = AddConfigAndParent(dstate, nmotion);
 
-              nmotion = motion;
+              //nmotion = motion;
           } else {
             continue;
           }

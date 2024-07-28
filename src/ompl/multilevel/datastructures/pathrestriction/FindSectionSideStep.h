@@ -36,8 +36,9 @@
 
 /* Author: Andreas Orthey */
 
-#ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_PATH_RESTRICTION_FIND_SECTION_SIDESTEP_
-#define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_PATH_RESTRICTION_FIND_SECTION_SIDESTEP_
+#ifndef OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_FIND_SECTION_SIDESTEP_
+#define OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_FIND_SECTION_SIDESTEP_
+
 #include <ompl/multilevel/datastructures/pathrestriction/FindSection.h>
 
 namespace ompl
@@ -67,13 +68,14 @@ namespace ompl
 
         public:
             FindSectionSideStep() = delete;
-            FindSectionSideStep(PathRestriction *);
+            FindSectionSideStep(const PathRestrictionPtr& restriction);
 
             virtual ~FindSectionSideStep();
 
-            virtual bool solve(HeadPtr &head) override;
+            //virtual std::optional<PathSectionPtr> solve(HeadPtr &head) override;
+            std::optional<PathSectionPtr> solve(const base::State* xBase, const base::State* xBundle) override;
 
-            bool recursiveSideStep(HeadPtr &head, bool interpolateFiberFirst = true, unsigned int depth = 0);
+            std::optional<PathSectionPtr> recursiveSideStep(HeadPtr &head, bool interpolateFiberFirst = true, unsigned int depth = 0);
         };
     }
 }

@@ -40,7 +40,6 @@
 #include <ompl/multilevel/datastructures/pathrestriction/PathSection.h>
 #include <ompl/multilevel/datastructures/pathrestriction/Head.h>
 #include <ompl/multilevel/datastructures/pathrestriction/FindSection.h>
-#include <ompl/multilevel/datastructures/graphsampler/GraphSampler.h>
 #include <ompl/multilevel/datastructures/Projection.h>
 #include <ompl/multilevel/datastructures/projections/FiberedProjection.h>
 
@@ -54,18 +53,16 @@ namespace ompl
 
 using namespace ompl::multilevel;
 
-FindSection::FindSection(PathRestriction *restriction) : restriction_(restriction)
+FindSection::FindSection(const PathRestrictionPtr& restriction) : restriction_(restriction)
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-
-    if (!graph->getProjection()->isFibered())
+    if (!restriction_->getProjection()->isFibered())
     {
-        OMPL_DEBUG("Finding section with non-fibered projection.");
-        return;
+        OMPL_ERROR("Finding section with non-fibered projection.");
+        throw ompl::Exception("FindSection is only valid with a fibered projection");
     }
 
-    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
-    if (graph->getCoDimension() > 0)
+    auto projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
+    if (projection->getCoDimension() > 0)
     {
         base::StateSpacePtr fiber = projection->getFiberSpace();
         if(fiber == nullptr) {
@@ -77,16 +74,16 @@ FindSection::FindSection(PathRestriction *restriction) : restriction_(restrictio
         xFiberTmp_ = fiber->allocState();
         validFiberSpaceSegmentLength_ = fiber->getLongestValidSegmentLength();
     }
-    if (graph->getBaseDimension() > 0)
+    if (projection->getBaseDimension() > 0)
     {
-        base::SpaceInformationPtr base = graph->getBase();
+        auto base = projection->getBase();
         xBaseTmp_ = base->allocState();
-        validBaseSpaceSegmentLength_ = base->getStateSpace()->getLongestValidSegmentLength();
+        validBaseSpaceSegmentLength_ = base->getLongestValidSegmentLength();
     }
-    base::SpaceInformationPtr bundle = graph->getBundle();
+    auto bundle = projection->getBundle();
     xBundleTmp_ = bundle->allocState();
 
-    validBundleSpaceSegmentLength_ = bundle->getStateSpace()->getLongestValidSegmentLength();
+    validBundleSpaceSegmentLength_ = bundle->getLongestValidSegmentLength();
 
     neighborhoodRadiusBaseSpaceLambda_ = 1e-4;
 
@@ -97,22 +94,21 @@ FindSection::FindSection(PathRestriction *restriction) : restriction_(restrictio
 
 FindSection::~FindSection()
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
+    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
 
-    if (graph->getCoDimension() > 0)
+    if (projection->getCoDimension() > 0)
     {
         base::StateSpacePtr fiber = projection->getFiberSpace();
         fiber->freeState(xFiberStart_);
         fiber->freeState(xFiberGoal_);
         fiber->freeState(xFiberTmp_);
     }
-    if (graph->getBaseDimension() > 0)
+    if (projection->getBaseDimension() > 0)
     {
-        base::SpaceInformationPtr base = graph->getBase();
+        auto base = projection->getBase();
         base->freeState(xBaseTmp_);
     }
-    base::SpaceInformationPtr bundle = graph->getBundle();
+    auto bundle = projection->getBundle();
     bundle->freeState(xBundleTmp_);
 }
 
@@ -121,15 +117,14 @@ bool FindSection::findFeasibleStateOnFiber(const ompl::base::State *xBase, ompl:
     unsigned int ctr = 0;
     bool found = false;
 
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
+    auto projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
 
-    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
-    base::SpaceInformationPtr bundle = graph->getBundle();
-    base::SpaceInformationPtr base = graph->getBundle();
+    auto bundle = projection->getBundle();
+    auto base = projection->getBundle();
 
     const ompl::base::StateSamplerPtr samplerFiber = projection->getFiberSamplerPtr();
 
-    if (graph->getCoDimension() > 0)
+    if (projection->getCoDimension() > 0)
     {
         while (ctr++ < magic::PATH_SECTION_MAX_FIBER_SAMPLING && !found)
         {
@@ -138,7 +133,7 @@ bool FindSection::findFeasibleStateOnFiber(const ompl::base::State *xBase, ompl:
             projection->lift(xBase, xFiberTmp_, xBundle);
 
             // New sample must be valid AND not reachable from last valid
-            if (bundle->isValid(xBundle))
+            if (restriction_->getSpaceInformation()->isValid(xBundle))
             {
                 found = true;
             }
@@ -151,136 +146,135 @@ bool FindSection::findFeasibleStateOnFiber(const ompl::base::State *xBase, ompl:
     return found;
 }
 
-bool FindSection::tripleStep(HeadPtr &head, const ompl::base::State *sBundleGoal, double locationOnBasePathGoal)
-{
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    base::SpaceInformationPtr bundle = graph->getBundle();
-    base::SpaceInformationPtr base = graph->getBase();
+// bool FindSection::tripleStep(HeadPtr &head, const ompl::base::State *sBundleGoal, double locationOnBasePathGoal)
+// {
+//     auto projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
+//     auto bundle = projection->getBundle();
+//     auto base = projection->getBase();
 
-    base::State *xBundleStartTmp = bundle->allocState();
-    base::State *xBundleGoalTmp = bundle->allocState();
-    base::State *xBase = base->cloneState(head->getStateBase());
-    const base::State *sBundleStart = head->getState();
+//     base::State *xBundleStartTmp = bundle->allocState();
+//     base::State *xBundleGoalTmp = bundle->allocState();
+//     base::State *xBase = base->cloneState(head->getStateBase());
+//     const base::State *sBundleStart = head->getState();
 
-    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
-    projection->projectFiber(sBundleStart, xFiberStart_);
-    projection->projectFiber(sBundleGoal, xFiberGoal_);
-    base::StateSpacePtr fiber = projection->getFiberSpace();
+//     projection->projectFiber(sBundleStart, xFiberStart_);
+//     projection->projectFiber(sBundleGoal, xFiberGoal_);
+//     base::StateSpacePtr fiber = projection->getFiberSpace();
 
-    double fiberDist = fiber->distance(xFiberStart_, xFiberGoal_);
-    if (fiberDist < 1e-3)
-        return false;
+//     double fiberDist = fiber->distance(xFiberStart_, xFiberGoal_);
+//     if (fiberDist < 1e-3)
+//         return false;
 
-    bool found = false;
+//     bool found = false;
 
-    // mid point heuristic
-    fiber->interpolate(xFiberStart_, xFiberGoal_, 0.5, xFiberTmp_);
+//     // mid point heuristic
+//     fiber->interpolate(xFiberStart_, xFiberGoal_, 0.5, xFiberTmp_);
 
-    double location = head->getLocationOnBasePath() - validBaseSpaceSegmentLength_;
+//     double location = head->getLocationOnBasePath() - validBaseSpaceSegmentLength_;
 
-    // Triple step connection attempt
-    // xBundleStartTmp <------- xBundleStart
-    //     |
-    //     |
-    //     |
-    //     v
-    // xBundleGoalTmp -------> xBundleGoal
+//     // Triple step connection attempt
+//     // xBundleStartTmp <------- xBundleStart
+//     //     |
+//     //     |
+//     //     |
+//     //     v
+//     // xBundleGoalTmp -------> xBundleGoal
 
-    while (!found && location >= 0)
-    {
-        restriction_->interpolateBasePath(location, xBase);
+//     while (!found && location >= 0)
+//     {
+//         restriction_->interpolateBasePath(location, xBase);
 
-        projection->lift(xBase, xFiberTmp_, xBundleStartTmp);
+//         projection->lift(xBase, xFiberTmp_, xBundleStartTmp);
 
-        if (bundle->isValid(xBundleStartTmp))
-        {
-            projection->lift(xBase, xFiberStart_, xBundleStartTmp);
-            projection->lift(xBase, xFiberGoal_, xBundleGoalTmp);
+//         if (restriction_->getSpaceInformation()->isValid(xBundleStartTmp))
+//         {
+//             projection->lift(xBase, xFiberStart_, xBundleStartTmp);
+//             projection->lift(xBase, xFiberGoal_, xBundleGoalTmp);
 
-            if (bundle->isValid(xBundleStartTmp) && bundle->isValid(xBundleGoalTmp))
-            {
-                if (bundle->checkMotion(xBundleStartTmp, xBundleGoalTmp))
-                {
-                    bool feasible = true;
+//             if (restriction_->getSpaceInformation()->isValid(xBundleStartTmp) && restriction_->getSpaceInformation()->isValid(xBundleGoalTmp))
+//             {
+//                 if (restriction_->getSpaceInformation()->checkMotion(xBundleStartTmp, xBundleGoalTmp))
+//                 {
+//                     bool feasible = true;
 
-                    double fiberStepSize = 2 * validFiberSpaceSegmentLength_;
+//                     double fiberStepSize = 2 * validFiberSpaceSegmentLength_;
 
-                    if (!bundle->checkMotion(sBundleStart, xBundleStartTmp))
-                    {
-                        feasible = false;
+//                     if (!restriction_->getSpaceInformation()->checkMotion(sBundleStart, xBundleStartTmp))
+//                     {
+//                         feasible = false;
 
-                        double fiberLocation = 0.25 * fiberDist;
-                        do
-                        {
-                            fiberLocation -= fiberStepSize;
+//                         double fiberLocation = 0.25 * fiberDist;
+//                         do
+//                         {
+//                             fiberLocation -= fiberStepSize;
 
-                            fiber->interpolate(xFiberStart_, xFiberGoal_, fiberLocation / fiberDist, xFiberTmp_);
+//                             fiber->interpolate(xFiberStart_, xFiberGoal_, fiberLocation / fiberDist, xFiberTmp_);
 
-                            projection->lift(xBase, xFiberTmp_, xBundleStartTmp);
+//                             projection->lift(xBase, xFiberTmp_, xBundleStartTmp);
 
-                            if (bundle->checkMotion(sBundleStart, xBundleStartTmp) &&
-                                bundle->checkMotion(xBundleStartTmp, xBundleGoalTmp))
-                            {
-                                feasible = true;
-                                break;
-                            }
-                        } while (fiberLocation > -0.25 * fiberDist);
-                        // try to repair
-                    }
-                    if (feasible && !bundle->checkMotion(xBundleGoalTmp, sBundleGoal))
-                    {
-                        feasible = false;
+//                             if (restriction_->getSpaceInformation()->checkMotion(sBundleStart, xBundleStartTmp) &&
+//                                 restriction_->getSpaceInformation()->checkMotion(xBundleStartTmp, xBundleGoalTmp))
+//                             {
+//                                 feasible = true;
+//                                 break;
+//                             }
+//                         } while (fiberLocation > -0.25 * fiberDist);
+//                         // try to repair
+//                     }
+//                     if (feasible && !restriction_->getSpaceInformation()->checkMotion(xBundleGoalTmp, sBundleGoal))
+//                     {
+//                         feasible = false;
 
-                        double fiberLocation = 0.25 * fiberDist;
-                        do
-                        {
-                            fiberLocation += fiberStepSize;
+//                         double fiberLocation = 0.25 * fiberDist;
+//                         do
+//                         {
+//                             fiberLocation += fiberStepSize;
 
-                            fiber->interpolate(xFiberStart_, xFiberGoal_, fiberLocation / fiberDist, xFiberTmp_);
+//                             fiber->interpolate(xFiberStart_, xFiberGoal_, fiberLocation / fiberDist, xFiberTmp_);
 
-                            projection->lift(xBase, xFiberTmp_, xBundleGoalTmp);
+//                             projection->lift(xBase, xFiberTmp_, xBundleGoalTmp);
 
-                            if (bundle->checkMotion(xBundleGoalTmp, sBundleGoal) &&
-                                bundle->checkMotion(xBundleStartTmp, xBundleGoalTmp))
-                            {
-                                feasible = true;
-                                break;
-                            }
+//                             if (restriction_->getSpaceInformation()->checkMotion(xBundleGoalTmp, sBundleGoal) &&
+//                                 restriction_->getSpaceInformation()->checkMotion(xBundleStartTmp, xBundleGoalTmp))
+//                             {
+//                                 feasible = true;
+//                                 break;
+//                             }
 
-                        } while (fiberLocation < 1.25 * fiberDist);
-                    }
-                    if (feasible)
-                    {
-                        found = true;
-                    }
-                    break;
-                }
-            }
-        }
+//                         } while (fiberLocation < 1.25 * fiberDist);
+//                     }
+//                     if (feasible)
+//                     {
+//                         found = true;
+//                     }
+//                     break;
+//                 }
+//             }
+//         }
 
-        location -= validBaseSpaceSegmentLength_;
-    }
+//         location -= validBaseSpaceSegmentLength_;
+//     }
 
-    if (found)
-    {
-        Configuration *xBackStep = new Configuration(bundle, xBundleStartTmp);
-        graph->addConfiguration(xBackStep);
-        graph->addBundleEdge(head->getConfiguration(), xBackStep);
+//     if (found)
+//     {
+//         Configuration *xBackStep = new Configuration(bundle, xBundleStartTmp);
+//         graph->addConfiguration(xBackStep);
+//         graph->addBundleEdge(head->getState(), xBackStep);
 
-        Configuration *xSideStep = new Configuration(bundle, xBundleGoalTmp);
-        graph->addConfiguration(xSideStep);
-        graph->addBundleEdge(xBackStep, xSideStep);
+//         Configuration *xSideStep = new Configuration(bundle, xBundleGoalTmp);
+//         graph->addConfiguration(xSideStep);
+//         graph->addBundleEdge(xBackStep, xSideStep);
 
-        // xBaseTmp_ is on last valid fiber.
-        Configuration *xGoal = new Configuration(bundle, sBundleGoal);
-        graph->addConfiguration(xGoal);
-        graph->addBundleEdge(xSideStep, xGoal);
+//         // xBaseTmp_ is on last valid fiber.
+//         Configuration *xGoal = new Configuration(bundle, sBundleGoal);
+//         graph->addConfiguration(xGoal);
+//         graph->addBundleEdge(xSideStep, xGoal);
 
-        head->setCurrent(xGoal, locationOnBasePathGoal);
-    }
+//         head->setCurrent(xGoal, locationOnBasePathGoal);
+//     }
 
-    bundle->freeState(xBundleStartTmp);
-    bundle->freeState(xBundleGoalTmp);
-    base->freeState(xBase);
-    return found;
-}
+//     bundle->freeState(xBundleStartTmp);
+//     bundle->freeState(xBundleGoalTmp);
+//     base->freeState(xBase);
+//     return found;
+// }

@@ -36,11 +36,14 @@
 
 /* Author: Andreas Orthey */
 
-#ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_PATH_RESTRICTION_FIND_SECTION_
-#define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_PATH_RESTRICTION_FIND_SECTION_
-#include <ompl/multilevel/datastructures/BundleSpaceGraph.h>
+#ifndef OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_FINDSECTION_
+#define OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_FINDSECTION_
+
 #include <ompl/multilevel/datastructures/ParameterExponentialDecay.h>
 #include <ompl/multilevel/datastructures/ParameterSmoothStep.h>
+#include <ompl/util/ClassForward.h>
+#include <ompl/base/State.h>
+#include <optional>
 
 namespace ompl
 {
@@ -61,37 +64,35 @@ namespace ompl
     namespace multilevel
     {
         /// @cond IGNORE
-        /** \brief Forward declaration of ompl::multilevel::BundleSpaceGraph */
-        OMPL_CLASS_FORWARD(BundleSpaceGraph);
         /** \brief Forward declaration of ompl::multilevel::PathRestriction */
         OMPL_CLASS_FORWARD(PathRestriction);
         /** \brief Forward declaration of ompl::multilevel::FiberedProjection */
         OMPL_CLASS_FORWARD(FiberedProjection);
         /** \brief Forward declaration of ompl::multilevel::Head */
         OMPL_CLASS_FORWARD(Head);
+        /** \brief Forward declaration of ompl::multilevel::PathSection */
+        OMPL_CLASS_FORWARD(PathSection);
         /// @endcond
-
-        using Configuration = ompl::multilevel::BundleSpaceGraph::Configuration;
 
         class FindSection
         {
         public:
             FindSection() = delete;
-            FindSection(PathRestriction *);
+            FindSection(const PathRestrictionPtr& restriction);
 
             virtual ~FindSection();
 
-            virtual bool solve(HeadPtr &head) = 0;
+            virtual std::optional<PathSectionPtr> solve(const base::State* xBase, const base::State* xBundle) = 0;
 
             /** \brief Sample state on fiber while keeping base state fixed */
-            bool findFeasibleStateOnFiber(const base::State *xBase, base::State *xBundle);
+            bool findFeasibleStateOnFiber(const base::State* xBase, base::State* xBundle);
 
             /** \brief Triple step pattern */
-            bool tripleStep(HeadPtr &head, const base::State *sBundleGoal, double locationOnBasePathGoal);
+            //bool tripleStep(HeadPtr &head, const base::State *sBundleGoal, double locationOnBasePathGoal);
 
         protected:
             /** \brief Pointer to associated bundle space */
-            PathRestriction *restriction_;
+            PathRestrictionPtr restriction_;
 
             base::State *xBaseTmp_{nullptr};
             base::State *xBundleTmp_{nullptr};

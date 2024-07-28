@@ -40,102 +40,109 @@
 #include <ompl/multilevel/datastructures/pathrestriction/PathRestriction.h>
 #include <ompl/multilevel/datastructures/projections/FiberedProjection.h>
 
+#include <ompl/util/Exception.h>
+
 using namespace ompl::multilevel;
 
-Head::Head(PathRestriction *restriction, Configuration *xCurrent, Configuration *xTarget)
+Head::Head(const PathRestrictionPtr& restriction, const ompl::base::State *xCurrent, const ompl::base::State *xTarget)
 {
-    xCurrent_ = xCurrent;
-    xTarget_ = xTarget;
-
     restriction_ = restriction;
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
+    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
 
-    if (graph->getBaseDimension() > 0)
+    auto bundle = projection->getBundle();
+    xCurrent_ = bundle->allocState();
+    xTarget_ = bundle->allocState();
+    bundle->copyState(xCurrent_, xCurrent);
+    bundle->copyState(xTarget_, xTarget);
+
+    if (projection->getBaseDimension() > 0)
     {
-        base::SpaceInformationPtr base = graph->getBase();
+        auto base = projection->getBase();
         xBaseCurrent_ = base->allocState();
-        graph->project(xCurrent->state, xBaseCurrent_);
+        projection->project(xCurrent_, xBaseCurrent_);
     }
-    if (graph->getCoDimension() > 0)
+    if (projection->getCoDimension() > 0)
     {
         base::StateSpacePtr fiber = projection->getFiberSpace();
         xFiberCurrent_ = fiber->allocState();
         xFiberTarget_ = fiber->allocState();
-        projection->projectFiber(xCurrent->state, xFiberCurrent_);
-        projection->projectFiber(xTarget->state, xFiberTarget_);
+        projection->projectFiber(xCurrent_, xFiberCurrent_);
+        projection->projectFiber(xTarget_, xFiberTarget_);
     }
 }
 
 Head::Head(const Head &rhs)
 {
-    xTarget_ = rhs.getTargetConfiguration();
+    xCurrent_ = rhs.getState();
+    xTarget_ = rhs.getTargetState();
     restriction_ = rhs.getRestriction();
 
     locationOnBasePath_ = rhs.getLocationOnBasePath();
     lastValidIndexOnBasePath_ = rhs.getLastValidBasePathIndex();
 
-    xCurrent_ = rhs.getConfiguration();
     xFiberCurrent_ = rhs.getStateFiberNonConst();
     xBaseCurrent_ = rhs.getStateBaseNonConst();
     xFiberTarget_ = rhs.getStateTargetFiberNonConst();
-    xTarget_ = rhs.getTargetConfiguration();
 }
 
 Head::~Head()
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    if (graph->getCoDimension() > 0)
+    std::stringstream buffer;
+    buffer << *this;
+    OMPL_DEVMSG1("Last head before termination: %s.", buffer.str().c_str());
+
+    auto projection = restriction_->getProjection();
+    if (projection->getCoDimension() > 0)
     {
-        FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
-        base::StateSpacePtr fiber = projection->getFiberSpace();
+        FiberedProjectionPtr fibered_projection = std::static_pointer_cast<FiberedProjection>(projection);
+        base::StateSpacePtr fiber = fibered_projection->getFiberSpace();
         fiber->freeState(xFiberCurrent_);
         fiber->freeState(xFiberTarget_);
     }
 
-    if (graph->getBaseDimension() > 0)
+    if (projection->getBaseDimension() > 0)
     {
-        base::SpaceInformationPtr base = graph->getBase();
+        auto base = projection->getBase();
         base->freeState(xBaseCurrent_);
     }
+
+    auto bundle = projection->getBundle();
+    bundle->freeState(xCurrent_);
+    bundle->freeState(xTarget_);
+
 }
 
-PathRestriction *Head::getRestriction() const
+PathRestrictionPtr Head::getRestriction() const
 {
     return restriction_;
 }
 
-Configuration *Head::getConfiguration() const
+ompl::base::State* Head::getState() const
 {
     return xCurrent_;
 }
 
-const ompl::base::State *Head::getState() const
-{
-    return xCurrent_->state;
-}
-
-const ompl::base::State *Head::getStateFiber() const
+const ompl::base::State* Head::getStateFiber() const
 {
     return xFiberCurrent_;
 }
 
-const ompl::base::State *Head::getStateBase() const
+const ompl::base::State* Head::getStateBase() const
 {
     return xBaseCurrent_;
 }
 
-ompl::base::State *Head::getStateFiberNonConst() const
+ompl::base::State* Head::getStateFiberNonConst() const
 {
     return xFiberCurrent_;
 }
 
-ompl::base::State *Head::getStateBaseNonConst() const
+ompl::base::State* Head::getStateBaseNonConst() const
 {
     return xBaseCurrent_;
 }
 
-Configuration *Head::getTargetConfiguration() const
+ompl::base::State* Head::getTargetState() const
 {
     return xTarget_;
 }
@@ -150,25 +157,24 @@ ompl::base::State *Head::getStateTargetFiberNonConst() const
     return xFiberTarget_;
 }
 
-void Head::setCurrent(Configuration *newCurrent, double location)
+void Head::setCurrent(const ompl::base::State* newCurrent, double location)
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-
-    xCurrent_ = newCurrent;
+    auto projection = restriction_->getProjection();
+    projection->getBundle()->copyState(xCurrent_, newCurrent);
 
     locationOnBasePath_ = location;
 
     lastValidIndexOnBasePath_ = restriction_->getBasePathLastIndexFromLocation(location);
 
-    if (graph->getBaseDimension() > 0)
+    if (projection->getBaseDimension() > 0)
     {
-        base::SpaceInformationPtr base = graph->getBase();
-        graph->project(xCurrent_->state, xBaseCurrent_);
+        auto base = projection->getBase();
+        projection->project(xCurrent_, xBaseCurrent_);
     }
-    if (graph->getCoDimension() > 0)
+    if (projection->getCoDimension() > 0)
     {
-        FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
-        projection->projectFiber(xCurrent_->state, xFiberCurrent_);
+        FiberedProjectionPtr fibered_projection = std::static_pointer_cast<FiberedProjection>(projection);
+        fibered_projection->projectFiber(xCurrent_, xFiberCurrent_);
     }
 }
 
@@ -243,7 +249,7 @@ int Head::getBaseStateIndexAt(int k) const
     unsigned int idx = lastValidIndexOnBasePath_ + k;
     if (restriction_->size() < 1)
     {
-        throw Exception("EmptyRestriction");
+        throw ompl::Exception("EmptyRestriction");
     }
     if (idx > restriction_->size() - 1)
     {
@@ -254,13 +260,13 @@ int Head::getBaseStateIndexAt(int k) const
 
 void Head::print(std::ostream &out) const
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    base::SpaceInformationPtr bundle = graph->getBundle();
-    base::SpaceInformationPtr base = graph->getBase();
+    auto projection = restriction_->getProjection();
+    auto bundle = projection->getBundle();
+    auto base = projection->getBase();
 
     out << std::endl << "[ Head at:";
     int idx = getLastValidBasePathIndex();
-    bundle->printState(xCurrent_->state, out);
+    bundle->printState(xCurrent_, out);
     out << "base location " << getLocationOnBasePath() << "/" << restriction_->getLengthBasePath() << " idx " << idx
         << "/" << restriction_->size() << std::endl;
     out << "last base state idx ";

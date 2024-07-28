@@ -43,75 +43,89 @@
 
 using namespace ompl::multilevel;
 
-PathSection::PathSection(PathRestriction *restriction) : restriction_(restriction)
+void allocStates(const ompl::base::StateSpacePtr& space, std::vector<ompl::base::State*>& states) {
+    for (auto &state : states){
+        state = space->allocState();
+    }
+}
+
+void freeStates(const ompl::base::StateSpacePtr& space, std::vector<ompl::base::State*>& states) {
+    for (auto &state : states){
+        space->freeState(state);
+    }
+}
+
+PathSection::PathSection(const PathRestrictionPtr& restriction) : restriction_(restriction)
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
-    if (graph->getCoDimension() > 0)
+    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
+    if (projection->getCoDimension() > 0)
     {
         base::StateSpacePtr fiber = projection->getFiberSpace();
         xFiberStart_ = fiber->allocState();
         xFiberGoal_ = fiber->allocState();
         xFiberTmp_ = fiber->allocState();
     }
-    if (graph->getBaseDimension() > 0)
+    if (projection->getBaseDimension() > 0)
     {
-        base::SpaceInformationPtr base = graph->getBase();
+        auto base = projection->getBase();
         xBaseTmp_ = base->allocState();
     }
-    base::SpaceInformationPtr bundle = graph->getBundle();
+    auto bundle = projection->getBundle();
     xBundleTmp_ = bundle->allocState();
     lastValid_.first = bundle->allocState();
 }
 
 PathSection::~PathSection()
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    base::SpaceInformationPtr bundle = graph->getBundle();
+    auto projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
+    auto bundle = projection->getBundle();
 
-    if (graph->getCoDimension() > 0)
+    if (projection->getCoDimension() > 0)
     {
-        FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
-        base::StateSpacePtr fiber = projection->getFiberSpace();
+        auto fiber = projection->getFiber();
         fiber->freeState(xFiberStart_);
         fiber->freeState(xFiberGoal_);
         fiber->freeState(xFiberTmp_);
     }
-    if (graph->getBaseDimension() > 0)
+    if (projection->getBaseDimension() > 0)
     {
-        base::SpaceInformationPtr base = graph->getBase();
+        auto base = projection->getBase();
         base->freeState(xBaseTmp_);
     }
 
-    bundle->freeStates(section_);
+    freeStates(bundle, section_states_);
     bundle->freeState(lastValid_.first);
     bundle->freeState(xBundleTmp_);
 }
 
 bool PathSection::checkMotion(HeadPtr &head)
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
+    ProjectionPtr projection = restriction_->getProjection();
 
-    base::SpaceInformationPtr bundle = graph->getBundle();
-    base::SpaceInformationPtr base = graph->getBase();
+    auto bundle = projection->getBundle();
+    auto base = projection->getBase();
 
-    for (unsigned int k = 1; k < section_.size(); k++)
+    for (unsigned int k = 1; k < section_states_.size(); k++)
     {
-        if (bundle->checkMotion(head->getState(), section_.at(k), lastValid_))
+        if (restriction_->getSpaceInformation()->checkMotion(head->getState(), section_states_.at(k), lastValid_))
         {
-            if (k < section_.size() - 1)
-            {
-                Configuration *xLast = addFeasibleSegment(head->getConfiguration(), section_.at(k));
+            //if (k < section_states_.size() - 1)
+            //{
+            //    //Configuration *xLast = addFeasibleSegment(head->getState(), section_states_.at(k));
 
-                double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
+            //    addEdgeToSection(head->getState(), section_states_.at(k));
 
-                head->setCurrent(xLast, locationOnBasePath);
-            }
-            else
-            {
-                addFeasibleGoalSegment(head->getConfiguration(), head->getTargetConfiguration());
-                return true;
-            }
+            //    double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
+
+            //    head->setCurrent(section_states_.at(k), locationOnBasePath);
+            //}
+            //else
+            //{
+            //    addFeasibleGoalSegment(head->getState(), head->getTargetState());
+            //    return true;
+            //}
+            double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
+            head->setCurrent(section_states_.at(k), locationOnBasePath);
         }
         else
         {
@@ -119,7 +133,7 @@ bool PathSection::checkMotion(HeadPtr &head)
 
             base::State *lastValidBaseState = restriction_->getBasePath().at(lastValidIndexOnBasePath_);
 
-            graph->project(lastValid_.first, xBaseTmp_);
+            projection->project(lastValid_.first, xBaseTmp_);
 
             double distBaseSegment = base->distance(lastValidBaseState, xBaseTmp_);
 
@@ -132,242 +146,78 @@ bool PathSection::checkMotion(HeadPtr &head)
             if (lastValid_.second > 0)
             {
                 // add last valid into the bundle graph
-                Configuration *xBundleLastValid = new Configuration(bundle, lastValid_.first);
-                graph->addConfiguration(xBundleLastValid);
-                graph->addBundleEdge(head->getConfiguration(), xBundleLastValid);
+                //addEdgeToSection(head->getState(), lastValid_.first);
+                // Configuration *xBundleLastValid = new Configuration(bundle, lastValid_.first);
+                // graph->addConfiguration(xBundleLastValid);
+                // graph->addBundleEdge(head->getState(), xBundleLastValid);
 
-                head->setCurrent(xBundleLastValid, locationOnBasePath);
+                head->setCurrent(lastValid_.first, locationOnBasePath);
             }
             return false;
         }
     }
-    return false;
+    return true;
 }
 
-ompl::base::State *PathSection::at(int k) const
-{
-    return section_.at(k);
+void PathSection::resize(unsigned int k) {
+  section_states_.resize(k);
+  allocStates(restriction_->getProjection()->getBundle(), section_states_);
 }
 
-const ompl::base::State *PathSection::back() const
-{
-    return section_.back();
+std::vector<ompl::base::State*> PathSection::getStates() const {
+  return section_states_;
 }
 
-const ompl::base::State *PathSection::front() const
+const ompl::base::State* PathSection::at(int k) const
 {
-    return section_.front();
+    return section_states_.at(k);
 }
 
-void PathSection::interpolateL1FiberFirst(HeadPtr &head)
+const ompl::base::State* PathSection::back() const
 {
-    section_.clear();
-    sectionBaseStateIndices_.clear();
-
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    base::SpaceInformationPtr base = graph->getBase();
-    base::SpaceInformationPtr bundle = graph->getBundle();
-
-    int size = head->getNumberOfRemainingStates() + 1;
-
-    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
-
-    if (graph->getCoDimension() > 0)
-    {
-        const base::State *xFiberStart = head->getStateFiber();
-        const base::State *xFiberGoal = head->getStateTargetFiber();
-
-        section_.resize(size + 1);
-
-        bundle->allocStates(section_);
-
-        projection->lift(head->getBaseStateAt(0), xFiberStart, section_.front());
-
-        sectionBaseStateIndices_.push_back(head->getBaseStateIndexAt(0));
-
-        for (unsigned int k = 1; k < section_.size(); k++)
-        {
-            projection->lift(head->getBaseStateAt(k - 1), xFiberGoal, section_.at(k));
-            sectionBaseStateIndices_.push_back(head->getBaseStateIndexAt(k - 1));
-        }
-    }
-    else
-    {
-        section_.resize(size);
-
-        bundle->allocStates(section_);
-
-        for (int k = 0; k < size; k++)
-        {
-            bundle->copyState(section_.at(k), head->getBaseStateAt(k));
-            sectionBaseStateIndices_.push_back(head->getBaseStateIndexAt(k));
-        }
-    }
+    return section_states_.back();
 }
 
-void PathSection::interpolateL1FiberLast(HeadPtr &head)
+const ompl::base::State* PathSection::front() const
 {
-    section_.clear();
-    sectionBaseStateIndices_.clear();
-
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    const base::SpaceInformationPtr bundle = graph->getBundle();
-    const base::SpaceInformationPtr base = graph->getBase();
-
-    int size = head->getNumberOfRemainingStates() + 1;
-
-    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
-    if (graph->getCoDimension() > 0)
-    {
-        const base::State *xFiberStart = head->getStateFiber();
-        const base::State *xFiberGoal = head->getStateTargetFiber();
-
-        section_.resize(size + 1);
-
-        bundle->allocStates(section_);
-
-        for (int k = 0; k < size; k++)
-        {
-            projection->lift(head->getBaseStateAt(k), xFiberStart, section_.at(k));
-            sectionBaseStateIndices_.push_back(head->getBaseStateIndexAt(k));
-        }
-        projection->lift(head->getBaseStateAt(size - 1), xFiberGoal, section_.back());
-        sectionBaseStateIndices_.push_back(head->getBaseStateIndexAt(size - 1));
-    }
-    else
-    {
-        section_.resize(size);
-        bundle->allocStates(section_);
-        for (int k = 0; k < size; k++)
-        {
-            bundle->copyState(section_.at(k), head->getBaseStateAt(k));
-            sectionBaseStateIndices_.push_back(head->getBaseStateIndexAt(k));
-        }
-    }
-    sanityCheck(head);
+    return section_states_.front();
 }
 
-void PathSection::interpolateL2(HeadPtr &head)
+ompl::base::State* PathSection::atNonConst(int k) const
 {
-    section_.clear();
-    sectionBaseStateIndices_.clear();
-
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    base::SpaceInformationPtr bundle = graph->getBundle();
-    const std::vector<base::State *> basePath = restriction_->getBasePath();
-
-    int size = head->getNumberOfRemainingStates() + 1;
-
-    section_.resize(size);
-    bundle->allocStates(section_);
-
-    if (graph->getCoDimension() > 0)
-    {
-        const base::State *xFiberStart = head->getStateFiber();
-        const base::State *xFiberGoal = head->getStateTargetFiber();
-
-        double totalLengthBasePath = restriction_->getLengthBasePath();
-
-        FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(graph->getProjection());
-        base::StateSpacePtr fiber = projection->getFiberSpace();
-
-        for (unsigned int k = 0; k < restriction_->size(); k++)
-        {
-            double lengthCurrent = restriction_->getLengthBasePathUntil(k);
-            double step = lengthCurrent / totalLengthBasePath;
-
-            fiber->interpolate(xFiberStart, xFiberGoal, step, xFiberTmp_);
-
-            projection->lift(restriction_->getBaseStateAt(k), xFiberTmp_, section_.at(k));
-
-            sectionBaseStateIndices_.push_back(k);
-        }
-    }
-    else
-    {
-        for (unsigned int k = 0; k < basePath.size(); k++)
-        {
-            bundle->copyState(section_.at(k), basePath.at(k));
-            sectionBaseStateIndices_.push_back(k);
-        }
-    }
+    return section_states_.at(k);
 }
 
-BundleSpaceGraph::Configuration *PathSection::addFeasibleSegment(Configuration *xLast, ompl::base::State *sNext)
+ompl::base::State* PathSection::backNonConst() const
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-
-    base::SpaceInformationPtr bundle = graph->getBundle();
-
-    Configuration *x = new Configuration(bundle, sNext);
-    graph->addConfiguration(x);
-    graph->addBundleEdge(xLast, x);
-
-    x->parent = xLast;
-    return x;
+    return section_states_.back();
 }
 
-void PathSection::addFeasibleGoalSegment(Configuration *xLast, Configuration *xGoal)
+ompl::base::State* PathSection::frontNonConst() const
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    if (xGoal->index < 0)  // graph->getGoalIndex())
-    {
-        graph->addConfiguration(xGoal);
-        graph->addGoalConfiguration(xGoal);
-    }
-    graph->addBundleEdge(xLast, xGoal);
-
-    xGoal->parent = xLast;
+    return section_states_.front();
 }
 
-void PathSection::sanityCheck(HeadPtr &head)
+void PathSection::AddBaseStateIndex(const int index) {
+    sectionBaseStateIndices_.push_back(index);
+}
+
+void PathSection::addEdgeToSection(ompl::base::State* xLast, ompl::base::State* xNext)
 {
-    if (section_.size() > 0)
-    {
-        base::State *xi = head->getConfiguration()->state;
-        base::State *xg = head->getTargetConfiguration()->state;
-
-        BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-        base::SpaceInformationPtr bundle = graph->getBundle();
-        base::SpaceInformationPtr base = graph->getBase();
-
-        double d1 = bundle->distance(section_.front(), xi);
-        double d2 = bundle->distance(section_.back(), xg);
-
-        if (d1 > 1e-5 || d2 > 1e-5)
-        {
-            std::stringstream buffer;
-            buffer << "START STATE" << std::endl;
-            bundle->printState(xi, buffer);
-            bundle->printState(section_.front(), buffer);
-            buffer << "Distance: " << d1 << std::endl;
-            buffer << "GOAL STATE" << std::endl;
-            bundle->printState(xg, buffer);
-            buffer << "GOAL STATE (SECTION)" << std::endl;
-            bundle->printState(section_.back(), buffer);
-            buffer << "Dist:" << d2 << std::endl;
-            int size = head->getNumberOfRemainingStates();
-            buffer << "Section size: " << section_.size() << std::endl;
-            buffer << "Remaining states: " << size << std::endl;
-            buffer << "Restriction size:" << restriction_->size() << std::endl;
-            buffer << "Base states:" << std::endl;
-            buffer << *restriction_ << std::endl;
-            OMPL_ERROR("Invalid Section: %s", buffer.str().c_str());
-            throw Exception("Invalid Section");
-        }
-    }
+    section_states_.push_back(xNext);
+    edges_on_section_.push_back(std::make_pair(xLast, xNext));
 }
 
 void PathSection::sanityCheck()
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    base::SpaceInformationPtr bundle = graph->getBundle();
+    ProjectionPtr projection = restriction_->getProjection();
+    auto bundle = projection->getBundle();
     bool feasible = true;
-    for (unsigned int k = 1; k < section_.size(); k++)
+    for (unsigned int k = 1; k < section_states_.size(); k++)
     {
-        base::State *sk1 = section_.at(k - 1);
-        base::State *sk2 = section_.at(k);
-        if (!bundle->checkMotion(sk1, sk2))
+        base::State *sk1 = section_states_.at(k - 1);
+        base::State *sk2 = section_states_.at(k);
+        if (!restriction_->getSpaceInformation()->checkMotion(sk1, sk2))
         {
             feasible = false;
             OMPL_ERROR("Error between states %d and %d.", k - 1, k);
@@ -385,29 +235,29 @@ void PathSection::sanityCheck()
 
 unsigned int PathSection::size() const
 {
-    return section_.size();
+    return section_states_.size();
 }
 
 void PathSection::print(std::ostream &out) const
 {
-    BundleSpaceGraph *graph = restriction_->getBundleSpaceGraph();
-    base::SpaceInformationPtr bundle = graph->getBundle();
-    base::SpaceInformationPtr base = graph->getBase();
+    ProjectionPtr projection = restriction_->getProjection();
+    auto bundle = projection->getBundle();
+    auto base = projection->getBase();
 
     out << std::string(80, '-') << std::endl;
-    out << "PATH SECTION" << std::endl;
+    out << "Path Section" << std::endl;
     out << std::string(80, '-') << std::endl;
 
-    out << section_.size() << " states over " << restriction_->size() << " base states." << std::endl;
+    out << section_states_.size() << " states over " << restriction_->size() << " base states." << std::endl;
 
     int maxDisplay = 5;  // display first and last N elements
-    for (int k = 0; k < (int)section_.size(); k++)
+    for (int k = 0; k < (int)section_states_.size(); k++)
     {
-        if (k > maxDisplay && k < std::max(0, (int)section_.size() - maxDisplay))
+        if (k > maxDisplay && k < std::max(0, (int)section_states_.size() - maxDisplay))
             continue;
         int idx = sectionBaseStateIndices_.at(k);
         out << "State " << k << ": ";
-        bundle->printState(section_.at(k));
+        bundle->printState(section_states_.at(k));
         out << "Over Base state (idx " << idx << ") ";
         base->printState(restriction_->getBasePath().at(idx));
         out << std::endl;

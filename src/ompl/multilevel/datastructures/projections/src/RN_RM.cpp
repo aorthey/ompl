@@ -65,19 +65,19 @@ Projection_RN_RM::Projection_RN_RM(ompl::base::StateSpacePtr BundleSpace, ompl::
   : BaseT(BundleSpace, BaseSpace), projected_dimensions_(projected_dimensions)
 {
     if(projected_dimensions.size() != BaseSpace->getDimension()) {
-      OMPL_ERROR("For projection from %s to %s, you need to specify how each dimension \
-          is mapped to the bundle space. However, you only specified %d dimensions out of %d.", 
+      OMPL_ERROR("For projection from %s to %s, you need to specify how each dimension \n \
+          is mapped to the bundle space. However, you specified %d dimensions instead of %d.", 
        BundleSpace->getName().c_str(), BaseSpace->getName().c_str(),
        projected_dimensions.size(), BaseSpace->getDimension());
-      throw "InvalidDimensionError";
+      throw std::out_of_range("InvalidDimensionError");
     }
     for(const auto dimension : projected_dimensions) {
       if(dimension > BundleSpace->getDimension() - 1) {
-        OMPL_ERROR("For projection from %s to %s, you specified a dimension mapping to value %d, \
+        OMPL_ERROR("For projection from %s to %s, you specified a dimension mapping to value %d, \n \
             which is outside the dimensions of the bundle space (%d).",
          BundleSpace->getName().c_str(), BaseSpace->getName().c_str(),
          dimension, BundleSpace->getDimension());
-        throw "InvalidDimensionError";
+        throw std::out_of_range("InvalidDimensionError");
       }
     }
 
@@ -98,7 +98,7 @@ Projection_RN_RM::Projection_RN_RM(ompl::base::StateSpacePtr BundleSpace, ompl::
     if(total_size != getDimension()) {
       OMPL_ERROR("Dimension error: Base has %d, fiber has %d, but dimension is %d.", map_projected_dimension_to_base_.size(),
           map_non_projected_dimension_to_fiber_.size(), getDimension());
-      throw "InvalidDimensionError";
+      throw std::out_of_range("InvalidDimensionError");
     }
     setType(PROJECTION_RN_RM);
 }

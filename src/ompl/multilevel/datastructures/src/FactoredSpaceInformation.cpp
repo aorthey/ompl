@@ -11,6 +11,8 @@ using namespace ompl::multilevel;
 ompl::multilevel::FactoredSpaceInformation::FactoredSpaceInformation(const ompl::base::StateSpacePtr& space) : 
   ompl::base::SpaceInformation(space) 
 {
+  // auto name = space->getName() + "_" + std::to_string(space->getDimension()) + "D";
+  // space->setName(name);
   OMPL_INFORM("Create factor for space %s (dimensionality %d)", space->getName().c_str(), space->getDimension());
 }
 
@@ -230,6 +232,12 @@ void FactoredSpaceInformation::setProjectionToParent(ProjectionPtr projection) {
 
 void FactoredSpaceInformation::setup() {
   SpaceInformation::setup();
+
+  if(hasChildren()) {
+    for(const auto& child : children_ ) {
+      child->setup();
+    }
+  }
 }
 
 const FactoredSpaceInformationPtr& FactoredSpaceInformation::getChild(const std::string& name) const {
@@ -502,7 +510,4 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
     node_states.push_back(std::make_pair(parent->getName(), next_state));
     parent->freeChildStates(child_states);
   }
-}
-
-void FactoredSpaceInformation::interpolate(const base::State *from, const base::State *to, double t, base::State *state) const {
 }

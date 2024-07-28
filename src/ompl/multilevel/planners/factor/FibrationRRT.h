@@ -27,12 +27,11 @@ namespace ompl
 
         class FibrationRRT : public base::Planner 
         {
-
           public:
-
             using base::Planner::solve;
 
-            FibrationRRT(const FactoredSpaceInformationPtr &si, float goal_threshold = kGlobalGoalTreshold);
+            FibrationRRT(const base::SpaceInformationPtr &si, float goal_threshold = kGlobalGoalTreshold);
+            FibrationRRT(const FactoredSpaceInformationPtr &factor, float goal_threshold = kGlobalGoalTreshold);
 
             ~FibrationRRT() override;
 
@@ -51,8 +50,7 @@ namespace ompl
             const std::unordered_map<std::string, base::PlannerStatus>& getPlannerStatus() const;
 
             base::ProblemDefinitionPtr getProblemDefinition(const std::string& name) const;
-
-            //const FactoredSpaceInformationPtr& getFactoredSpaceInformation() const;
+            FactoredPlannerPtr getPlanner(const std::string& name) const;
 
             std::string getIterationsProperty() const;
             std::string getBestCostProperty() const;

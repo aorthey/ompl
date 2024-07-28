@@ -40,37 +40,38 @@
 #include <ompl/multilevel/datastructures/pathrestriction/Head.h>
 #include <ompl/multilevel/datastructures/pathrestriction/FindSection.h>
 #include <ompl/multilevel/datastructures/pathrestriction/FindSectionSideStep.h>
-#include <ompl/multilevel/datastructures/graphsampler/GraphSampler.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 
 #include <ompl/base/Path.h>
 #include <ompl/geometric/PathGeometric.h>
 #include <numeric>
 #include <ompl/util/Time.h>
+#include <ompl/util/Exception.h>
 
 using namespace ompl::multilevel;
 
-PathRestriction::PathRestriction(BundleSpaceGraph *bundleSpaceGraph) : bundleSpaceGraph_(bundleSpaceGraph)
+PathRestriction::PathRestriction(const FactoredSpaceInformationPtr& factor, const ProjectionPtr& projection) :
+  factor_(factor), projection_(projection)
 {
-    setFindSectionStrategy(FindSectionType::SIDE_STEP);
+    //setFindSectionStrategy(FindSectionType::SIDE_STEP);
 }
 
-void PathRestriction::setFindSectionStrategy(FindSectionType type)
-{
-    switch (type)
-    {
-        case FindSectionType::SIDE_STEP:
-            findSection_ = std::make_shared<FindSectionSideStep>(this);
-            break;
-        case FindSectionType::NONE:
-            findSection_ = nullptr;
-            break;
-        default:
-            OMPL_ERROR("Find section strategy unknown: %s", type);
-            throw ompl::Exception("Unknown Strategy");
-            break;
-    }
-}
+// void PathRestriction::setFindSectionStrategy(FindSectionType type)
+// {
+//     switch (type)
+//     {
+//         case FindSectionType::SIDE_STEP:
+//             findSection_ = std::make_shared<FindSectionSideStep>(factor_, this);
+//             break;
+//         case FindSectionType::NONE:
+//             findSection_ = nullptr;
+//             break;
+//         default:
+//             OMPL_ERROR("Find section strategy unknown: %s", type);
+//             throw ompl::Exception("Unknown Strategy");
+//             break;
+//     }
+// }
 
 PathRestriction::~PathRestriction()
 {
@@ -84,9 +85,8 @@ void PathRestriction::clear()
     lengthBasePath_ = 0;
 }
 
-BundleSpaceGraph *PathRestriction::getBundleSpaceGraph()
-{
-    return bundleSpaceGraph_;
+ProjectionPtr PathRestriction::getProjection() const {
+  return projection_;
 }
 
 void PathRestriction::setBasePath(ompl::base::PathPtr path)
@@ -108,7 +108,7 @@ void PathRestriction::setBasePath(std::vector<ompl::base::State *> basePath)
 
     for (unsigned int k = 1; k < basePath_.size(); k++)
     {
-        double lk = bundleSpaceGraph_->getBase()->distance(basePath_.at(k - 1), basePath_.at(k));
+        double lk = projection_->getBase()->distance(basePath_.at(k - 1), basePath_.at(k));
         lengthsIntermediateBasePath_.push_back(lk);
         lengthBasePath_ += lk;
         lengthsCumulativeBasePath_.push_back(lengthBasePath_);
@@ -118,7 +118,7 @@ void PathRestriction::setBasePath(std::vector<ompl::base::State *> basePath)
 
 void PathRestriction::interpolateBasePath(double t, ompl::base::State *&state) const
 {
-    base::SpaceInformationPtr base = bundleSpaceGraph_->getBase();
+    auto base = projection_->getBase();
 
     if (t <= 0)
     {
@@ -144,7 +144,7 @@ void PathRestriction::interpolateBasePath(double t, ompl::base::State *&state) c
     double dCum = (ctr > 0 ? lengthsCumulativeBasePath_.at(ctr - 1) : 0.0);
     double step = (t - dCum) / d;
 
-    base->getStateSpace()->interpolate(s1, s2, step, state);
+    base->interpolate(s1, s2, step, state);
 }
 
 const std::vector<ompl::base::State *> &PathRestriction::getBasePath() const
@@ -178,7 +178,7 @@ double PathRestriction::getLengthBasePathUntil(int k)
     if (k > (int)size())
     {
         OMPL_ERROR("Wrong index k=%d/%d", k, size());
-        throw Exception("WrongIndex");
+        throw ompl::Exception("WrongIndex");
     }
     if (k <= 0)
         return 0;
@@ -202,27 +202,14 @@ int PathRestriction::getBasePathLastIndexFromLocation(double d)
     return ctr;
 }
 
-bool PathRestriction::hasFeasibleSection(Configuration *const xStart, Configuration *const xGoal)
-{
-    if (findSection_ == nullptr)
-        return false;
-
-    HeadPtr head = std::make_shared<Head>(this, xStart, xGoal);
-
-    ompl::time::point tStart = ompl::time::now();
-    bool foundFeasibleSection = findSection_->solve(head);
-    ompl::time::point t1 = ompl::time::now();
-
-    OMPL_DEBUG("FindSection terminated after %.2fs (%d/%d vertices/edges).", ompl::time::seconds(t1 - tStart),
-               bundleSpaceGraph_->getNumberOfVertices(), bundleSpaceGraph_->getNumberOfEdges());
-
-    return foundFeasibleSection;
+FactoredSpaceInformationPtr PathRestriction::getSpaceInformation() const {
+  return factor_;
 }
 
 void PathRestriction::print(std::ostream &out) const
 {
-    const base::SpaceInformationPtr bundle = bundleSpaceGraph_->getBundle();
-    const base::SpaceInformationPtr base = bundleSpaceGraph_->getBase();
+    auto bundle = projection_->getBundle();
+    auto base = projection_->getBase();
 
     out << std::string(80, '-') << std::endl;
     out << "PATH RESTRICTION" << std::endl;

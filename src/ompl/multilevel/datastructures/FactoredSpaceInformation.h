@@ -69,8 +69,6 @@ namespace ompl
             void printSettings(std::ostream &out) const override;
             void printFactorization(std::ostream &out) const;
 
-            void interpolate(const base::State *from, const base::State *to, double t, base::State *state) const;
-
             void setup() override;
 
             std::string getName() const;
