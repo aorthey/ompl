@@ -112,6 +112,12 @@ FindSection::~FindSection()
     bundle->freeState(xBundleTmp_);
 }
 
+SectionNode* FindSection::addAsNode(const base::State* state) {
+  auto node = new SectionNode(restriction_->getSpaceInformation(), state);
+  nodes_.push_back(node);
+  return node;
+}
+
 bool FindSection::findFeasibleStateOnFiber(const ompl::base::State *xBase, ompl::base::State *xBundle)
 {
     unsigned int ctr = 0;

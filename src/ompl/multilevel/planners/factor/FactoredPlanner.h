@@ -7,14 +7,9 @@
 #include "ompl/geometric/planners/rrt/RRTConnect.h"
 #include "ompl/geometric/planners/rrt/RRTtask.h"
 #include "ompl/geometric/planners/rlrt/RLRT.h"
+#include "ompl/multilevel/datastructures/Expected.h"
 
 #include <optional>
-#include <boost/outcome.hpp>
-
-template <class T, class E>
-using Expected = boost::outcome_v2::basic_result<T, E, boost::outcome_v2::policy::default_policy<T, E, void>>;
-using boost::outcome_v2::failure;
-using boost::outcome_v2::success;
 
 namespace ompl {
     namespace multilevel {

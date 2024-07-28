@@ -41,6 +41,7 @@
 
 #include <ompl/multilevel/datastructures/ParameterExponentialDecay.h>
 #include <ompl/multilevel/datastructures/ParameterSmoothStep.h>
+#include <ompl/multilevel/datastructures/pathrestriction/SectionNode.h>
 #include <ompl/util/ClassForward.h>
 #include <ompl/base/State.h>
 #include <optional>
@@ -90,6 +91,8 @@ namespace ompl
             /** \brief Triple step pattern */
             //bool tripleStep(HeadPtr &head, const base::State *sBundleGoal, double locationOnBasePathGoal);
 
+            SectionNode* addAsNode(const base::State* state);
+
         protected:
             /** \brief Pointer to associated bundle space */
             PathRestrictionPtr restriction_;
@@ -100,6 +103,9 @@ namespace ompl
             base::State *xFiberStart_{nullptr};
             base::State *xFiberGoal_{nullptr};
             base::State *xFiberTmp_{nullptr};
+
+            SectionNode* root_;
+            std::vector<SectionNode*> nodes_;
 
         protected:
             /** \brief Radius of restriction neighborhood */

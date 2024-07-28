@@ -96,14 +96,11 @@ namespace ompl
             //Configuration *addFeasibleSegment(Configuration *xLast, base::State *sNext);
             void addEdgeToSection(base::State* xLast, base::State* xNext);
 
-            void AddBaseStateIndex(const int);
-        //sectionBaseStateIndices_.push_back(head->getBaseStateIndexAt(0));
-
-            //void addFeasibleGoalSegment(Configuration *xLast, Configuration *xGoal);
+            void addBaseStateIndex(const int);
 
             friend std::ostream &operator<<(std::ostream &, const PathSection &);
 
-            void print(std::ostream &) const;
+            void print(std::ostream &ostream = std::cout) const;
 
         protected:
             PathRestrictionPtr restriction_;

@@ -212,7 +212,7 @@ void PathRestriction::print(std::ostream &out) const
     auto base = projection_->getBase();
 
     out << std::string(80, '-') << std::endl;
-    out << "PATH RESTRICTION" << std::endl;
+    out << "Path Restriction" << std::endl;
     out << std::string(80, '-') << std::endl;
 
     for (unsigned int k = 0; k < basePath_.size(); k++)

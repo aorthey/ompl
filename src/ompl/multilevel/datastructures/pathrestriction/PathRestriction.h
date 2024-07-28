@@ -151,9 +151,9 @@ namespace ompl
              * lengthbasepath_] (using discrete state representation) */
             void interpolateBasePath(double t, base::State *&state) const;
 
-            friend std::ostream &operator<<(std::ostream &, const PathRestriction &);
+            friend std::ostream &operator<<(std::ostream&, const PathRestriction&);
 
-            virtual void print(std::ostream &) const;
+            virtual void print(std::ostream& os = std::cout) const;
 
         protected:
             /** \brief Pointer to associated state space */

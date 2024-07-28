@@ -16,7 +16,7 @@ PathSectionPtr interpolateL1FiberFirst(const PathRestrictionPtr& restriction, co
     auto base = projection->getBase();
     auto bundle = projection->getBundle();
 
-    int size = head->getNumberOfRemainingStates() + 1;
+    int size = head->getNumberOfRemainingStatesOnBasePath() + 1;
 
     if (projection->getCoDimension() > 0)
     {
@@ -27,12 +27,12 @@ PathSectionPtr interpolateL1FiberFirst(const PathRestrictionPtr& restriction, co
 
         projection->lift(head->getBaseStateAt(0), xFiberStart, section->frontNonConst());
 
-        section->AddBaseStateIndex(head->getBaseStateIndexAt(0));
+        section->addBaseStateIndex(head->getBaseStateIndexAt(0));
 
         for (unsigned int k = 1; k < section->size(); k++)
         {
             projection->lift(head->getBaseStateAt(k - 1), xFiberGoal, section->atNonConst(k));
-            section->AddBaseStateIndex(head->getBaseStateIndexAt(k - 1));
+            section->addBaseStateIndex(head->getBaseStateIndexAt(k - 1));
         }
     }
     else
@@ -42,7 +42,7 @@ PathSectionPtr interpolateL1FiberFirst(const PathRestrictionPtr& restriction, co
         for (int k = 0; k < size; k++)
         {
             bundle->copyState(section->atNonConst(k), head->getBaseStateAt(k));
-            section->AddBaseStateIndex(head->getBaseStateIndexAt(k));
+            section->addBaseStateIndex(head->getBaseStateIndexAt(k));
         }
     }
     return section;
@@ -56,7 +56,7 @@ PathSectionPtr interpolateL1FiberLast(const PathRestrictionPtr& restriction, con
   const auto bundle = projection->getBundle();
   const auto base = projection->getBase();
 
-  int size = head->getNumberOfRemainingStates() + 1;
+  int size = head->getNumberOfRemainingStatesOnBasePath() + 1;
 
   if (projection->getCoDimension() > 0)
   {
@@ -68,10 +68,10 @@ PathSectionPtr interpolateL1FiberLast(const PathRestrictionPtr& restriction, con
       for (int k = 0; k < size; k++)
       {
           projection->lift(head->getBaseStateAt(k), xFiberStart, section->atNonConst(k));
-          section->AddBaseStateIndex(head->getBaseStateIndexAt(k));
+          section->addBaseStateIndex(head->getBaseStateIndexAt(k));
       }
       projection->lift(head->getBaseStateAt(size - 1), xFiberGoal, section->backNonConst());
-      section->AddBaseStateIndex(head->getBaseStateIndexAt(size - 1));
+      section->addBaseStateIndex(head->getBaseStateIndexAt(size - 1));
   }
   else
   {
@@ -79,7 +79,7 @@ PathSectionPtr interpolateL1FiberLast(const PathRestrictionPtr& restriction, con
       for (int k = 0; k < size; k++)
       {
           bundle->copyState(section->atNonConst(k), head->getBaseStateAt(k));
-          section->AddBaseStateIndex(head->getBaseStateIndexAt(k));
+          section->addBaseStateIndex(head->getBaseStateIndexAt(k));
       }
   }
   return section;
@@ -93,7 +93,7 @@ PathSectionPtr interpolateL2(const PathRestrictionPtr& restriction, const HeadPt
     auto bundle = projection->getBundle();
     const std::vector<ompl::base::State *> basePath = restriction->getBasePath();
 
-    int size = head->getNumberOfRemainingStates() + 1;
+    int size = head->getNumberOfRemainingStatesOnBasePath() + 1;
 
     section->resize(size);
 
@@ -116,7 +116,7 @@ PathSectionPtr interpolateL2(const PathRestrictionPtr& restriction, const HeadPt
 
             projection->lift(restriction->getBaseStateAt(k), xFiberTmp, section->atNonConst(k));
 
-            section->AddBaseStateIndex(head->getBaseStateIndexAt(k));
+            section->addBaseStateIndex(head->getBaseStateIndexAt(k));
             //sectionBaseStateIndices_.push_back(k);
         }
         fiber->freeState(xFiberTmp);
@@ -126,7 +126,7 @@ PathSectionPtr interpolateL2(const PathRestrictionPtr& restriction, const HeadPt
         for (unsigned int k = 0; k < basePath.size(); k++)
         {
             bundle->copyState(section->atNonConst(k), basePath.at(k));
-            section->AddBaseStateIndex(head->getBaseStateIndexAt(k));
+            section->addBaseStateIndex(head->getBaseStateIndexAt(k));
             //sectionBaseStateIndices_.push_back(k);
         }
     }

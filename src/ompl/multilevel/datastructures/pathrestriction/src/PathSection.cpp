@@ -98,67 +98,6 @@ PathSection::~PathSection()
     bundle->freeState(xBundleTmp_);
 }
 
-bool PathSection::checkMotion(HeadPtr &head)
-{
-    ProjectionPtr projection = restriction_->getProjection();
-
-    auto bundle = projection->getBundle();
-    auto base = projection->getBase();
-
-    for (unsigned int k = 1; k < section_states_.size(); k++)
-    {
-        if (restriction_->getSpaceInformation()->checkMotion(head->getState(), section_states_.at(k), lastValid_))
-        {
-            //if (k < section_states_.size() - 1)
-            //{
-            //    //Configuration *xLast = addFeasibleSegment(head->getState(), section_states_.at(k));
-
-            //    addEdgeToSection(head->getState(), section_states_.at(k));
-
-            //    double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
-
-            //    head->setCurrent(section_states_.at(k), locationOnBasePath);
-            //}
-            //else
-            //{
-            //    addFeasibleGoalSegment(head->getState(), head->getTargetState());
-            //    return true;
-            //}
-            double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
-            head->setCurrent(section_states_.at(k), locationOnBasePath);
-        }
-        else
-        {
-            lastValidIndexOnBasePath_ = sectionBaseStateIndices_.at(k - 1);
-
-            base::State *lastValidBaseState = restriction_->getBasePath().at(lastValidIndexOnBasePath_);
-
-            projection->project(lastValid_.first, xBaseTmp_);
-
-            double distBaseSegment = base->distance(lastValidBaseState, xBaseTmp_);
-
-            double locationOnBasePath =
-                restriction_->getLengthBasePathUntil(lastValidIndexOnBasePath_) + distBaseSegment;
-
-            //############################################################################
-            // Get Last valid
-            //############################################################################
-            if (lastValid_.second > 0)
-            {
-                // add last valid into the bundle graph
-                //addEdgeToSection(head->getState(), lastValid_.first);
-                // Configuration *xBundleLastValid = new Configuration(bundle, lastValid_.first);
-                // graph->addConfiguration(xBundleLastValid);
-                // graph->addBundleEdge(head->getState(), xBundleLastValid);
-
-                head->setCurrent(lastValid_.first, locationOnBasePath);
-            }
-            return false;
-        }
-    }
-    return true;
-}
-
 void PathSection::resize(unsigned int k) {
   section_states_.resize(k);
   allocStates(restriction_->getProjection()->getBundle(), section_states_);
@@ -198,7 +137,7 @@ ompl::base::State* PathSection::frontNonConst() const
     return section_states_.front();
 }
 
-void PathSection::AddBaseStateIndex(const int index) {
+void PathSection::addBaseStateIndex(const int index) {
     sectionBaseStateIndices_.push_back(index);
 }
 
@@ -237,6 +176,78 @@ unsigned int PathSection::size() const
 {
     return section_states_.size();
 }
+
+bool PathSection::checkMotion(HeadPtr &head)
+{
+    ProjectionPtr projection = restriction_->getProjection();
+
+    auto bundle = projection->getBundle();
+    auto base = projection->getBase();
+
+    for (unsigned int k = 1; k < section_states_.size(); k++)
+    {
+        if (restriction_->getSpaceInformation()->checkMotion(head->getState(), section_states_.at(k), lastValid_))
+        {
+            //auto xLast = addAsNode(section_states_.at(k));
+            // xLast->parent = head->getState;
+            // double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
+            // head->setCurrent(section_states_.at(k), locationOnBasePath);
+
+            if (k < section_states_.size() - 1) {
+              continue;
+            }
+            //addFeasibleGoalSegment(head->getState(), head->getTargetState());
+            return true;
+        }
+            //{
+            //    //Configuration *xLast = addFeasibleSegment(head->getState(), section_states_.at(k));
+
+            //    addEdgeToSection(head->getState(), section_states_.at(k));
+
+            //    double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
+
+            //    head->setCurrent(section_states_.at(k), locationOnBasePath);
+            //}
+            //else
+            //{
+            //    addFeasibleGoalSegment(head->getState(), head->getTargetState());
+            //    return true;
+            //}
+            // double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
+            // head->setCurrent(section_states_.at(k), locationOnBasePath);
+        // }
+        // else
+        // {
+            lastValidIndexOnBasePath_ = sectionBaseStateIndices_.at(k - 1);
+
+            base::State *lastValidBaseState = restriction_->getBasePath().at(lastValidIndexOnBasePath_);
+
+            projection->project(lastValid_.first, xBaseTmp_);
+
+            double distBaseSegment = base->distance(lastValidBaseState, xBaseTmp_);
+
+            double locationOnBasePath =
+                restriction_->getLengthBasePathUntil(lastValidIndexOnBasePath_) + distBaseSegment;
+
+            //############################################################################
+            // Get Last valid
+            //############################################################################
+            if (lastValid_.second > 0)
+            {
+                // add last valid into the bundle graph
+                //addEdgeToSection(head->getState(), lastValid_.first);
+                // Configuration *xBundleLastValid = new Configuration(bundle, lastValid_.first);
+                // graph->addConfiguration(xBundleLastValid);
+                // graph->addBundleEdge(head->getState(), xBundleLastValid);
+
+                head->setCurrent(lastValid_.first, locationOnBasePath);
+            }
+            return false;
+        // }
+    }
+    return true;
+}
+
 
 void PathSection::print(std::ostream &out) const
 {

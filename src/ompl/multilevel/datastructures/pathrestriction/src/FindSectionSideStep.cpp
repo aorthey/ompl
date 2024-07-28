@@ -71,26 +71,22 @@ std::optional<PathSectionPtr> FindSectionSideStep::solve(const ompl::base::State
         return std::nullopt;
     }
 
-    HeadPtr head = std::make_shared<Head>(restriction_, xStart, xGoal);
+    root_ = addAsNode(xStart);
+    HeadPtr head = std::make_shared<Head>(restriction_, root_, xGoal);
 
     const ompl::base::State *q = head->getState();
 
     auto maybe_fiber_first_section = recursiveSideStep(head, true);
     if (maybe_fiber_first_section.has_value()) {
-    std::stringstream buffer;
-    buffer << *head;
-    OMPL_DEVMSG1("Last head before termination: %s.", buffer.str().c_str());
       return maybe_fiber_first_section;
     }
 
     head->setCurrent(q, 0);
     auto maybe_fiber_last_section = recursiveSideStep(head, false);
     if (maybe_fiber_last_section.has_value()) {
-    std::stringstream buffer;
-    buffer << *head;
-    OMPL_DEVMSG1("Last head before termination: %s.", buffer.str().c_str());
       return maybe_fiber_last_section;
     }
+
     std::stringstream buffer;
     buffer << *head;
     OMPL_DEVMSG1("Last head before termination: %s.", buffer.str().c_str());
@@ -108,7 +104,7 @@ PathSectionPtr MakeInterpolatedSection(const PathRestrictionPtr& restriction, co
     }
 }
 
-std::optional<PathSectionPtr> FindSectionSideStep::recursiveSideStep(HeadPtr &head, bool interpolateFiberFirst, unsigned int depth)
+std::optional<PathSectionPtr> FindSectionSideStep::recursiveSideStep(HeadPtr& head, bool interpolateFiberFirst, unsigned int depth)
 {
     auto projection = restriction_->getProjection();
     auto bundle = projection->getBundle();
@@ -119,6 +115,7 @@ std::optional<PathSectionPtr> FindSectionSideStep::recursiveSideStep(HeadPtr &he
     if (section->checkMotion(head))
     {
         OMPL_DEVMSG1("Found section on depth %d", depth);
+        section->print();
         return section;
     }
 
@@ -136,6 +133,9 @@ std::optional<PathSectionPtr> FindSectionSideStep::recursiveSideStep(HeadPtr &he
     }
 
     double location = head->getLocationOnBasePath();
+    auto n = head->getNumberOfRemainingStatesOnBasePath();
+    //std::cout << "Location: " << location << " remaining states: " << n << std::endl;
+    std::cout << *head << std::endl;
 
     base::State *xBase = base->allocState();
 
@@ -143,6 +143,9 @@ std::optional<PathSectionPtr> FindSectionSideStep::recursiveSideStep(HeadPtr &he
 
     for (unsigned int j = 0; j < magic::PATH_SECTION_TREE_MAX_BRANCHING; j++)
     {
+
+        //Find a feasible fiber state to which we can sidestep 
+        //(i.e. make a step exclusively on the fiber while keeping the base state constant)
         if (!findFeasibleStateOnFiber(xBase, xBundleTmp_))
         {
             continue;
@@ -150,24 +153,28 @@ std::optional<PathSectionPtr> FindSectionSideStep::recursiveSideStep(HeadPtr &he
 
         if (restriction_->getSpaceInformation()->checkMotion(head->getState(), xBundleTmp_))
         {
-            auto xSideStep = bundle->allocState();
-            bundle->copyState(xSideStep, xBundleTmp_);
+            //auto xSideStep = bundle->allocState();
+            //bundle->copyState(xSideStep, xBundleTmp_);
 
-            OMPL_ERROR("NEED TO ADD CONFIG TO SECTION PATH");
-            throw "NYI";
-            // Configuration *xSideStep = new Configuration(bundle, xBundleTmp_);
+            // OMPL_ERROR("NEED TO ADD CONFIG TO SECTION PATH");
+
+            // auto n = head->getNumberOfRemainingStatesOnBasePath();
+            // throw "NYI";
+
+            //SectionNode *xSideStep = new SectionNode(bundle, xBundleTmp_);
+            auto xSideStep = addAsNode(xBundleTmp_);
+            xSideStep->parent = head->getSectionNode();
+
             // graph->addConfiguration(xSideStep);
             // graph->addBundleEdge(head->getConfiguration(), xSideStep);
 
             HeadPtr newHead(head);
-
-            newHead->setCurrent(xSideStep, location);
+            newHead->setCurrent(xSideStep->state, location);
 
             auto maybe_feasible_section = recursiveSideStep(newHead, !interpolateFiberFirst, depth + 1);
 
             if (maybe_feasible_section.has_value())
             {
-                head = newHead;
                 base->freeState(xBase);
                 return maybe_feasible_section.value();
             }

@@ -44,36 +44,36 @@
 
 using namespace ompl::multilevel;
 
-Head::Head(const PathRestrictionPtr& restriction, const ompl::base::State *xCurrent, const ompl::base::State *xTarget)
+Head::Head(const PathRestrictionPtr& restriction, SectionNode* xCurrent, const ompl::base::State *xTarget)
 {
     restriction_ = restriction;
+    xCurrent_ = xCurrent;
+
     FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
 
     auto bundle = projection->getBundle();
-    xCurrent_ = bundle->allocState();
     xTarget_ = bundle->allocState();
-    bundle->copyState(xCurrent_, xCurrent);
     bundle->copyState(xTarget_, xTarget);
 
     if (projection->getBaseDimension() > 0)
     {
         auto base = projection->getBase();
         xBaseCurrent_ = base->allocState();
-        projection->project(xCurrent_, xBaseCurrent_);
+        projection->project(xCurrent_->state, xBaseCurrent_);
     }
     if (projection->getCoDimension() > 0)
     {
         base::StateSpacePtr fiber = projection->getFiberSpace();
         xFiberCurrent_ = fiber->allocState();
         xFiberTarget_ = fiber->allocState();
-        projection->projectFiber(xCurrent_, xFiberCurrent_);
+        projection->projectFiber(xCurrent_->state, xFiberCurrent_);
         projection->projectFiber(xTarget_, xFiberTarget_);
     }
 }
 
 Head::Head(const Head &rhs)
 {
-    xCurrent_ = rhs.getState();
+    xCurrent_ = rhs.getSectionNode();
     xTarget_ = rhs.getTargetState();
     restriction_ = rhs.getRestriction();
 
@@ -107,7 +107,7 @@ Head::~Head()
     }
 
     auto bundle = projection->getBundle();
-    bundle->freeState(xCurrent_);
+    bundle->freeState(xCurrent_->state);
     bundle->freeState(xTarget_);
 
 }
@@ -118,6 +118,11 @@ PathRestrictionPtr Head::getRestriction() const
 }
 
 ompl::base::State* Head::getState() const
+{
+    return xCurrent_->state;
+}
+
+SectionNode* Head::getSectionNode() const
 {
     return xCurrent_;
 }
@@ -160,7 +165,7 @@ ompl::base::State *Head::getStateTargetFiberNonConst() const
 void Head::setCurrent(const ompl::base::State* newCurrent, double location)
 {
     auto projection = restriction_->getProjection();
-    projection->getBundle()->copyState(xCurrent_, newCurrent);
+    projection->getBundle()->copyState(xCurrent_->state, newCurrent);
 
     locationOnBasePath_ = location;
 
@@ -169,12 +174,12 @@ void Head::setCurrent(const ompl::base::State* newCurrent, double location)
     if (projection->getBaseDimension() > 0)
     {
         auto base = projection->getBase();
-        projection->project(xCurrent_, xBaseCurrent_);
+        projection->project(xCurrent_->state, xBaseCurrent_);
     }
     if (projection->getCoDimension() > 0)
     {
         FiberedProjectionPtr fibered_projection = std::static_pointer_cast<FiberedProjection>(projection);
-        fibered_projection->projectFiber(xCurrent_, xFiberCurrent_);
+        fibered_projection->projectFiber(xCurrent_->state, xFiberCurrent_);
     }
 }
 
@@ -201,7 +206,7 @@ double Head::getLocationOnBasePath() const
     return locationOnBasePath_;
 }
 
-int Head::getNumberOfRemainingStates()
+int Head::getNumberOfRemainingStatesOnBasePath()
 {
     //----- | ---------------X-------|---------|
     //    lastValid        xCurrent
@@ -266,7 +271,7 @@ void Head::print(std::ostream &out) const
 
     out << std::endl << "[ Head at:";
     int idx = getLastValidBasePathIndex();
-    bundle->printState(xCurrent_, out);
+    bundle->printState(xCurrent_->state, out);
     out << "base location " << getLocationOnBasePath() << "/" << restriction_->getLengthBasePath() << " idx " << idx
         << "/" << restriction_->size() << std::endl;
     out << "last base state idx ";
