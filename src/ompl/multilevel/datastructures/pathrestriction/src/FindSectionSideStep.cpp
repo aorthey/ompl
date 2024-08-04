@@ -48,7 +48,7 @@
 
 #include <optional>
 
-const bool kDebug = false;
+const bool kDebug = true;
 namespace ompl
 {
     namespace magic
@@ -109,7 +109,7 @@ std::optional<PathSectionPtr> FindSectionSideStep::recursiveSideStep(const TreeP
     auto nextHead = resultAndNewHead.second;
     const double& new_location_on_base_path = nextHead->getLocationOnBasePath();
 
-    if(kDebug) std::cout << "Head stopped at " << new_location_on_base_path << std::endl;
+    if(kDebug) std::cout << "Head stopped at " << new_location_on_base_path << "/" << restriction_->getLengthBasePath() << std::endl;
     if(kDebug) bundle->printState(nextHead->getState());
 
     const double progress = std::abs(old_location_on_base_path - new_location_on_base_path);

@@ -275,7 +275,17 @@ void FibrationRRT::grow_(const FactoredSpaceInformationPtr& factor) {
   }
   auto& planner = active_planners_[factor->getName()];
   ompl::base::IterationTerminationCondition itc(kNumberOfIterationsPerPlannerCall);
-  planner_status_per_factor_.insert({factor->getName(), planner->solve(itc)});
+  auto planner_status = planner->solve(itc);
+  //OMPL_ERROR("Factor %s has status %s", factor->getName().c_str(), planner_status.asString().c_str());
+
+  auto name = factor->getName();
+  if(planner_status_per_factor_.count(name)){
+    planner_status_per_factor_[name] = planner_status;
+  } else {
+    planner_status_per_factor_.insert({name, planner_status});
+  }
+  //planner_status_per_factor_.insert({factor->getName(), planner_status});
+  //OMPL_ERROR("Factor %s has status %s", factor->getName().c_str(), planner_status_per_factor_[factor->getName()].asString().c_str());
 }
 
 std::vector<FactoredPlannerPtr> FibrationRRT::getChildrenPlanner_(const FactoredSpaceInformationPtr& factor) const {
@@ -362,6 +372,10 @@ void FibrationRRT::createPlannerForFactor_(const FactoredSpaceInformationPtr& fa
     active_planners_[name] = std::make_shared<FactoredPlanner>(factor, children_planner);
   }
 
+  if(seed_.has_value()) {
+    active_planners_[name]->setSeed(seed_.value());
+  }
+
   //Setting local or global parameter values 
   auto maybe_range = getParameter(name, range_);
   if(maybe_range.has_value()) {
@@ -394,9 +408,6 @@ void FibrationRRT::createPlannerForFactor_(const FactoredSpaceInformationPtr& fa
   active_planners_[name]->setup();
   active_planners_[name]->setProblemDefinition(iterator->second);
 
-  if(seed_.has_value()) {
-    active_planners_[name]->setSeed(seed_.value());
-  }
 }
 
 void FibrationRRT::setProblemDefinition(const base::ProblemDefinitionPtr &pdef) {

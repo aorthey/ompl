@@ -18,11 +18,19 @@ using namespace ompl::multilevel;
 
 const size_t kMaximumIterations = 5;
 
-bool isStateValid_InvalidMidsection(const State *state)
+bool isStateValid_Midsection(const State *state)
 {
     const auto *SE2state = state->as<SE2StateSpace::StateType>();
+    const auto *R2 = SE2state->as<RealVectorStateSpace::StateType>(0);
     const auto *SO2 = SE2state->as<SO2StateSpace::StateType>(1);
-    return (std::abs(SO2->value) > boost::math::constants::pi<double>() / 4.0);
+    const auto x = R2->values[0];
+    const auto y = R2->values[1];
+
+    auto d = std::sqrt(x*x + y*y);
+    if( d < 0.25 || d > 0.75) {
+      return true;
+    }
+    return (std::abs(SO2->value) > boost::math::constants::pi<double>() / 2.0);
 }
 
 BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ComputingPathSectionTest)
@@ -37,7 +45,7 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ComputingPathSectionTest)
     SE2->setBounds(bounds);
     SE2->setName(kNameTotalSpace);
     auto factor(std::make_shared<FactoredSpaceInformation>(SE2));
-    factor->setStateValidityChecker(isStateValid_InvalidMidsection);
+    factor->setStateValidityChecker(isStateValid_Midsection);
 
     auto R2(std::make_shared<RealVectorStateSpace>(2));
     R2->setBounds(0, 1);
@@ -53,16 +61,17 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ComputingPathSectionTest)
     SE2State start(SE2);
     SE2State goal(SE2);
     start->setXY(0, 0);
-    start->setYaw(-1.0);
+    start->setYaw(-0.25);
     goal->setXY(1, 1);
-    goal->setYaw(+1.0);
+    goal->setYaw(+0.25);
 
     ProblemDefinitionPtr pdef = std::make_shared<ProblemDefinition>(factor);
     pdef->setStartAndGoalStates(start, goal);
 
+    ompl::RNG::setSeed(1);
+
     auto planner = std::make_shared<ompl::multilevel::FibrationRRT>(factor);
     planner->setProblemDefinition(pdef);
-    planner->setSeed(0);
     planner->setup();
     planner->setRange(1000);
     planner->setSmoothIntermediateSolutions(false);

@@ -6,6 +6,7 @@
 #include <ompl/multilevel/datastructures/pathrestriction/FindSectionSideStep.h>
 #include <ompl/multilevel/datastructures/pathrestriction/PathRestrictionInterpolator.h>
 #include <ompl/multilevel/datastructures/pathrestriction/ParallelFibrationSectionSolver.h>
+#include <ompl/multilevel/datastructures/pathrestriction/PartialFibrationSectionSolver.h>
 
 #include <string>
 
@@ -53,7 +54,7 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
   auto qGoal = MakeGoalState();
 
 ////////////////////////////////////////////////////////////////////////////////
-// Sequential fibration
+// Sequential/Partial fibration
 ////////////////////////////////////////////////////////////////////////////////
   if (children.size() == 1)
   {
@@ -70,11 +71,6 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
       return failure("Child has no projection.");
     }
 
-    if(!projection->isFibered())
-    {
-      return failure("Projection is not fibered.");
-    }
-
     auto child_planner = children_planner_.front();
     const auto& pdef = child_planner->getProblemDefinition();
     if(!pdef->hasSolution()) 
@@ -87,23 +83,31 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
     auto path_restriction = std::make_shared<PathRestriction>(factor, projection);
     path_restriction->setBasePath(base_path);
 
-    auto find_section = std::make_shared<FindSectionSideStep>(path_restriction);
+    if(projection->isFibered())
+    {
+      OMPL_ERROR("SectionSearch: Sequential Fibration");
+      auto find_section = std::make_shared<FindSectionSideStep>(path_restriction);
+      ompl::time::point tStart = ompl::time::now();
+      auto maybe_section = find_section->solve(tree_, qGoal);
+      ompl::time::point tEnd = ompl::time::now();
 
-    ompl::time::point tStart = ompl::time::now();
-    auto maybe_section = find_section->solve(tree_, qGoal);
-    ompl::time::point tEnd = ompl::time::now();
-
-    if(!maybe_section.has_value()) {
-      return failure("Timeout after " + std::to_string(ompl::time::seconds(tEnd - tStart)) + "s");
+      if(!maybe_section.has_value()) {
+        return failure("Timeout after " + std::to_string(ompl::time::seconds(tEnd - tStart)) + "s");
+      }
+      return success(maybe_section.value());
+    } else {
+      OMPL_ERROR("SectionSearch: Partial Fibration");
+      auto maybe_section = partialFibrationSectionSolver(factor, tree_, path_restriction, qGoal);
+      if(!maybe_section.has_value()) {
+        OMPL_ERROR("Found no section");
+        return failure("Could not find section");
+      }
+      return success(maybe_section.value());
     }
-
-    auto section = maybe_section.value();
-
-    return success(maybe_section.value());
   }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Parallel/Partial fibration
+// Parallel fibration
 ////////////////////////////////////////////////////////////////////////////////
   std::unordered_map<std::string, PathRestrictionPtr> path_restrictions;
 
@@ -126,6 +130,7 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
     path_restrictions[child->getName()] = path_restriction;
   }
 
+  OMPL_ERROR("SectionSearch: Parallel Fibration");
   auto maybe_section = parallelFibrationSectionSolver(factor, tree_, path_restrictions);
   if(maybe_section.has_value()) {
     return success(maybe_section.value());
@@ -149,15 +154,19 @@ ompl::base::PlannerStatus FactoredPlanner::solve(const ompl::base::PlannerTermin
 
     auto maybe_section = solveSection();
     if(maybe_section.has_value()) {
+        OMPL_WARN("Found section");
         base::Goal *goal = pdef_->getGoal().get();
         if(goal->isSatisfied(maybe_section.value()->back())) {
           auto nodes = tree_->getNodes();
           for(const auto& node : nodes) {
             if(goal->isSatisfied(node->getState())) {
               makeSolutionPath(node, false, 0.0);
-              return {true, false};
+              OMPL_WARN("Return exact");
+              return ompl::base::PlannerStatus(ompl::base::PlannerStatus::EXACT_SOLUTION);
             }
           }
+        } else {
+          OMPL_WARN("Found section, but last state is not in goal");
         }
     }
   }
@@ -193,7 +202,7 @@ double FactoredPlanner::getSamplingPerturbationBias() const {
 
 void FactoredPlanner::setSeed(size_t seed) 
 {
-  ompl::RNG::setSeed(seed);
+  //ompl::RNG::setSeed(seed);
   rng_ = ompl::RNG(seed);
 }
 

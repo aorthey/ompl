@@ -365,11 +365,10 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ParallelLeafNodeLift)
     leafStates.insert({E->getName(), stateE});
 
     A->liftLeafStates(leafStates, stateA);
-
-    const auto *stateA_RN = stateA->as<ompl::base::RealVectorStateSpace::StateType>();
-
     A->printState(stateA);
-    //States should be ordered
+
+    // const auto *stateA_RN = stateA->as<ompl::base::RealVectorStateSpace::StateType>();
+    // //States should be ordered
     // for(size_t k = 0; k < A->getStateDimension(); k++) {
     //   BOOST_CHECK_CLOSE(stateA_RN->values[k], 0.2+k*0.1, 1e-5);
     // }

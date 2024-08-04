@@ -93,6 +93,8 @@ namespace ompl
             bool first_run_{true};
 
             TreeNode *random_node{nullptr};
+
+            bool solved_{false};
         };
     }
 }

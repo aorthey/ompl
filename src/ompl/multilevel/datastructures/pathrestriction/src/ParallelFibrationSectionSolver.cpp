@@ -13,16 +13,20 @@ bool checkMotion(const FactoredSpaceInformationPtr& factor, const TreePtr& tree,
   lastValid.first = factor->allocState();
   lastValid.second = 0.0;
 
+  factor->printState(states.front());
+  factor->printState(states.back());
   TreeNode* lastNode(node);
   for (unsigned int k = 1; k < states.size(); k++)
   {
-      if (!factor->checkMotion(states.at(k-1), states.at(k), lastValid))
+      if (!factor->checkMotion(lastNode->getState(), states.at(k), lastValid))
       {
-        std::cout << "failed check motion" << std::endl;
+        std::cout << "Failed check motion" << std::endl;
         factor->printState(lastValid.first);
         return false;
       }
       auto xNext = tree->addNodeAndParent(states.at(k), lastNode);
+      std::cout << "New state added during check motion" << std::endl;
+      factor->printState(states.at(k));
       lastNode = xNext;
   }
   return true;
@@ -122,7 +126,6 @@ std::vector<ompl::base::State*> makeSectionPathL1(const FactoredSpaceInformation
   //////////////////////////////////////////////////////////////////////////////////
   //Get all base states and their respective positions along the path
   //////////////////////////////////////////////////////////////////////////////////
-
   auto statesChild = factor->allocChildStates();
 
   std::vector<ompl::base::State*> states;
@@ -141,7 +144,7 @@ std::vector<ompl::base::State*> makeSectionPathL1(const FactoredSpaceInformation
       const auto N = basePath.size();
       const auto name = path_restriction.first;
 
-      size_t startK = (counter == 0 ? 0 : 1);
+      size_t startK = (counter == 0 ? 0 : 1); //skip first state because it is already the end state of the last segment
       counter++;
       for(size_t k = startK; k < N; k++) {
         auto d = path_restriction.second->getLengthBasePathUntil(k) / L;
@@ -176,9 +179,9 @@ std::vector<ompl::base::State*> makeSectionPathL1(const FactoredSpaceInformation
   //////////////////////////////////////////////////////////////////////////////////
   // Print states
   //////////////////////////////////////////////////////////////////////////////////
-  // for(const auto& state : states) {
-  //   factor->printState(state);
-  // }
+  for(const auto& state : states) {
+    factor->printState(state);
+  }
 
   factor->freeChildStates(statesChild);
   return states;

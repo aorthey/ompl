@@ -316,6 +316,7 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_FactorTree)
 
     for(const auto& name_and_status : all_status) {
       const auto& factor_status = name_and_status.second;
+      OMPL_INFORM("Factor %s: %s", name_and_status.first.c_str(), name_and_status.second.asString().c_str());
       BOOST_CHECK(factor_status);
     }
 
