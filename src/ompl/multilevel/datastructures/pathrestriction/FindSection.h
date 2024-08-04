@@ -39,9 +39,9 @@
 #ifndef OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_FINDSECTION_
 #define OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_FINDSECTION_
 
-#include <ompl/multilevel/datastructures/ParameterExponentialDecay.h>
-#include <ompl/multilevel/datastructures/ParameterSmoothStep.h>
-#include <ompl/multilevel/datastructures/pathrestriction/SectionNode.h>
+#include <ompl/multilevel/datastructures/helpers/ParameterExponentialDecay.h>
+#include <ompl/multilevel/datastructures/helpers/ParameterSmoothStep.h>
+#include <ompl/multilevel/datastructures/Tree.h>
 #include <ompl/util/ClassForward.h>
 #include <ompl/base/State.h>
 #include <optional>
@@ -73,6 +73,8 @@ namespace ompl
         OMPL_CLASS_FORWARD(Head);
         /** \brief Forward declaration of ompl::multilevel::PathSection */
         OMPL_CLASS_FORWARD(PathSection);
+        /** \brief Forward declaration of ompl::multilevel::Tree */
+        OMPL_CLASS_FORWARD(Tree);
         /// @endcond
 
         class FindSection
@@ -83,15 +85,13 @@ namespace ompl
 
             virtual ~FindSection();
 
-            virtual std::optional<PathSectionPtr> solve(const base::State* xBase, const base::State* xBundle) = 0;
+            virtual std::optional<PathSectionPtr> solve(const TreePtr& tree, const base::State* target) = 0;
 
             /** \brief Sample state on fiber while keeping base state fixed */
-            bool findFeasibleStateOnFiber(const base::State* xBase, base::State* xBundle);
+            //bool findFeasibleStateOnFiber(const base::State* xBase, base::State* xBundle);
 
             /** \brief Triple step pattern */
             //bool tripleStep(HeadPtr &head, const base::State *sBundleGoal, double locationOnBasePathGoal);
-
-            SectionNode* addAsNode(const base::State* state);
 
         protected:
             /** \brief Pointer to associated bundle space */
@@ -103,9 +103,6 @@ namespace ompl
             base::State *xFiberStart_{nullptr};
             base::State *xFiberGoal_{nullptr};
             base::State *xFiberTmp_{nullptr};
-
-            SectionNode* root_;
-            std::vector<SectionNode*> nodes_;
 
         protected:
             /** \brief Radius of restriction neighborhood */

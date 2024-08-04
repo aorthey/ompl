@@ -39,19 +39,24 @@
 #include <ompl/multilevel/datastructures/pathrestriction/FindSectionSideStep.h>
 
 #include <ompl/multilevel/datastructures/pathrestriction/PathRestriction.h>
+#include <ompl/multilevel/datastructures/pathrestriction/PathRestrictionHelpers.h>
 #include <ompl/multilevel/datastructures/pathrestriction/PathRestrictionInterpolator.h>
 #include <ompl/multilevel/datastructures/pathrestriction/PathSection.h>
 #include <ompl/multilevel/datastructures/pathrestriction/Head.h>
 #include <ompl/multilevel/datastructures/projections/FiberedProjection.h>
+#include <ompl/multilevel/datastructures/Tree.h>
 
 #include <optional>
 
+const bool kDebug = false;
 namespace ompl
 {
     namespace magic
     {
-        static const unsigned int PATH_SECTION_TREE_MAX_DEPTH = 3;
-        static const unsigned int PATH_SECTION_TREE_MAX_BRANCHING = 10;
+        // static const unsigned int PATH_SECTION_TREE_MAX_DEPTH = 3;
+        // static const unsigned int PATH_SECTION_TREE_MAX_BRANCHING = 10;
+        static const unsigned int PATH_SECTION_TREE_MAX_DEPTH = 5;
+        static const unsigned int PATH_SECTION_TREE_MAX_BRANCHING = 2;
     }
 }
 
@@ -65,24 +70,15 @@ FindSectionSideStep::~FindSectionSideStep()
 {
 }
 
-std::optional<PathSectionPtr> FindSectionSideStep::solve(const ompl::base::State* xStart, const ompl::base::State* xGoal)
+std::optional<PathSectionPtr> FindSectionSideStep::solve(const TreePtr& tree, const ompl::base::State* target)
 {
     if (restriction_ == nullptr) {
         return std::nullopt;
     }
 
-    root_ = addAsNode(xStart);
-    HeadPtr head = std::make_shared<Head>(restriction_, root_, xGoal);
+    const HeadPtr head = std::make_shared<Head>(restriction_, tree->getRoot(), target);
 
-    const ompl::base::State *q = head->getState();
-
-    auto maybe_fiber_first_section = recursiveSideStep(head, true);
-    if (maybe_fiber_first_section.has_value()) {
-      return maybe_fiber_first_section;
-    }
-
-    head->setCurrent(q, 0);
-    auto maybe_fiber_last_section = recursiveSideStep(head, false);
+    auto maybe_fiber_last_section = recursiveSideStep(tree, head);
     if (maybe_fiber_last_section.has_value()) {
       return maybe_fiber_last_section;
     }
@@ -93,93 +89,68 @@ std::optional<PathSectionPtr> FindSectionSideStep::solve(const ompl::base::State
     return std::nullopt;
 }
 
-PathSectionPtr MakeInterpolatedSection(const PathRestrictionPtr& restriction, const HeadPtr& head, bool fiber_first) {
-    if (fiber_first)
-    {
-        return interpolateL1FiberFirst(restriction, head);
-    }
-    else
-    {
-        return interpolateL1FiberLast(restriction, head);
-    }
-}
-
-std::optional<PathSectionPtr> FindSectionSideStep::recursiveSideStep(HeadPtr& head, bool interpolateFiberFirst, unsigned int depth)
+std::optional<PathSectionPtr> FindSectionSideStep::recursiveSideStep(const TreePtr& tree, const HeadPtr& head, unsigned int depth)
 {
     auto projection = restriction_->getProjection();
     auto bundle = projection->getBundle();
     auto base = projection->getBase();
 
-    auto section = MakeInterpolatedSection(restriction_, head, interpolateFiberFirst);
+    const double old_location_on_base_path = head->getLocationOnBasePath();
+    if(kDebug) std::cout << ">>> Starting interpolate from " << old_location_on_base_path << std::endl;
 
-    if (section->checkMotion(head))
+    auto section = interpolateL1FiberLast(restriction_, head);
+    auto resultAndNewHead = section->checkMotion(tree, head);
+    if (resultAndNewHead.first)
     {
         OMPL_DEVMSG1("Found section on depth %d", depth);
-        section->print();
         return section;
     }
 
-    // static_cast<BundleSpaceGraph *>(projection->getChild())
-    //     ->getGraphSampler()
-    //     ->setPathBiasStartSegment(head->getLocationOnBasePath());
+    auto nextHead = resultAndNewHead.second;
+    const double& new_location_on_base_path = nextHead->getLocationOnBasePath();
 
-    //############################################################################
-    // Get last valid state information
-    //############################################################################
+    if(kDebug) std::cout << "Head stopped at " << new_location_on_base_path << std::endl;
+    if(kDebug) bundle->printState(nextHead->getState());
 
-    if (depth + 1 >= magic::PATH_SECTION_TREE_MAX_DEPTH)
-    {
+    const double progress = std::abs(old_location_on_base_path - new_location_on_base_path);
+
+    if(progress < 1e-4) {
+        if(kDebug) std::cout << "TERMINATE: No Progress" << std::endl;
         return std::nullopt;
     }
 
-    double location = head->getLocationOnBasePath();
-    auto n = head->getNumberOfRemainingStatesOnBasePath();
-    //std::cout << "Location: " << location << " remaining states: " << n << std::endl;
-    std::cout << *head << std::endl;
-
-    base::State *xBase = base->allocState();
-
-    restriction_->interpolateBasePath(location, xBase);
+    if (depth + 1 >= magic::PATH_SECTION_TREE_MAX_DEPTH)
+    {
+        if(kDebug) std::cout << "TERMINATE: Max depth" << std::endl;
+        return std::nullopt;
+    }
 
     for (unsigned int j = 0; j < magic::PATH_SECTION_TREE_MAX_BRANCHING; j++)
     {
 
         //Find a feasible fiber state to which we can sidestep 
         //(i.e. make a step exclusively on the fiber while keeping the base state constant)
-        if (!findFeasibleStateOnFiber(xBase, xBundleTmp_))
-        {
+        if(!findFeasibleStateOnFiber(restriction_, head, xBundleTmp_)) {
             continue;
         }
 
-        if (restriction_->getSpaceInformation()->checkMotion(head->getState(), xBundleTmp_))
+        if (restriction_->getSpaceInformation()->checkMotion(nextHead->getState(), xBundleTmp_))
         {
-            //auto xSideStep = bundle->allocState();
-            //bundle->copyState(xSideStep, xBundleTmp_);
+            auto xSideStep = tree->addNodeAndParent(xBundleTmp_, nextHead->getTreeNode());
 
-            // OMPL_ERROR("NEED TO ADD CONFIG TO SECTION PATH");
+            if(kDebug) std::cout << "New side step" << std::endl;
+            if(kDebug) bundle->printState(xBundleTmp_);
 
-            // auto n = head->getNumberOfRemainingStatesOnBasePath();
-            // throw "NYI";
+            HeadPtr newHead(nextHead);
+            newHead->setCurrent(xSideStep, new_location_on_base_path);
 
-            //SectionNode *xSideStep = new SectionNode(bundle, xBundleTmp_);
-            auto xSideStep = addAsNode(xBundleTmp_);
-            xSideStep->parent = head->getSectionNode();
-
-            // graph->addConfiguration(xSideStep);
-            // graph->addBundleEdge(head->getConfiguration(), xSideStep);
-
-            HeadPtr newHead(head);
-            newHead->setCurrent(xSideStep->state, location);
-
-            auto maybe_feasible_section = recursiveSideStep(newHead, !interpolateFiberFirst, depth + 1);
+            auto maybe_feasible_section = recursiveSideStep(tree, newHead, depth + 1);
 
             if (maybe_feasible_section.has_value())
             {
-                base->freeState(xBase);
                 return maybe_feasible_section.value();
             }
         }
     }
-    base->freeState(xBase);
     return std::nullopt;
 }

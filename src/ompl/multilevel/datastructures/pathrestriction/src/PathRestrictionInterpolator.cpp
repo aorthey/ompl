@@ -56,12 +56,17 @@ PathSectionPtr interpolateL1FiberLast(const PathRestrictionPtr& restriction, con
   const auto bundle = projection->getBundle();
   const auto base = projection->getBase();
 
-  int size = head->getNumberOfRemainingStatesOnBasePath() + 1;
+  int size = head->getNumberOfRemainingStatesOnBasePath() + 1; //remaining + current state
+  OMPL_ERROR("SIZE: %d", size);
 
   if (projection->getCoDimension() > 0)
   {
       const ompl::base::State *xFiberStart = head->getStateFiber();
       const ompl::base::State *xFiberGoal = head->getStateTargetFiber();
+      // OMPL_ERROR("Start:");
+      // projection->getFiber()->printState(xFiberStart);
+      // OMPL_ERROR("Goal:");
+      // projection->getFiber()->printState(xFiberGoal);
 
       section->resize(size + 1);
 
@@ -91,7 +96,7 @@ PathSectionPtr interpolateL2(const PathRestrictionPtr& restriction, const HeadPt
 
     auto projection = std::static_pointer_cast<FiberedProjection>(restriction->getProjection());
     auto bundle = projection->getBundle();
-    const std::vector<ompl::base::State *> basePath = restriction->getBasePath();
+    const auto& basePath = restriction->getBasePath();
 
     int size = head->getNumberOfRemainingStatesOnBasePath() + 1;
 
@@ -117,7 +122,6 @@ PathSectionPtr interpolateL2(const PathRestrictionPtr& restriction, const HeadPt
             projection->lift(restriction->getBaseStateAt(k), xFiberTmp, section->atNonConst(k));
 
             section->addBaseStateIndex(head->getBaseStateIndexAt(k));
-            //sectionBaseStateIndices_.push_back(k);
         }
         fiber->freeState(xFiberTmp);
     }
@@ -127,11 +131,9 @@ PathSectionPtr interpolateL2(const PathRestrictionPtr& restriction, const HeadPt
         {
             bundle->copyState(section->atNonConst(k), basePath.at(k));
             section->addBaseStateIndex(head->getBaseStateIndexAt(k));
-            //sectionBaseStateIndices_.push_back(k);
         }
     }
     return section;
 }
-
 }
 }

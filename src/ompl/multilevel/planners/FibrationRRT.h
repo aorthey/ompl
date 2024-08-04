@@ -5,7 +5,7 @@
 #include <ompl/base/PlannerData.h>
 #include <ompl/util/RandomNumbers.h>
 #include <unordered_map>
-#include <ompl/multilevel/planners/factor/FactoredPlanner.h>
+#include <ompl/multilevel/planners/FactoredPlanner.h>
 
 namespace ompl
 {
@@ -43,8 +43,7 @@ namespace ompl
 
             void setProblemDefinition(const base::ProblemDefinitionPtr &pdef) override;
             void getPlannerData(base::PlannerData &data) const override;
-
-            void setSelectorFunctionType(const SelectorFunctionType& selector_function_type);
+            size_t getNumberOfIterations() const;
 
             const std::unordered_map<std::string, base::ProblemDefinitionPtr>& getProblemDefinitions() const;
             const std::unordered_map<std::string, base::PlannerStatus>& getPlannerStatus() const;
@@ -57,7 +56,8 @@ namespace ompl
 
             size_t numFactors() const;
 
-            //Parameters for individual planners
+            //Parameters 
+            void setSelectorFunctionType(const SelectorFunctionType& selector_function_type);
             void setRange(double range);
             void setGoalBias(double goal_bias);
             void setSmoothIntermediateSolutions(bool smooth_intermediate_solutions = true);
@@ -92,6 +92,7 @@ namespace ompl
             void createProblemDefinition_(const FactoredSpaceInformationPtr& factor, const base::State* parent_start, const base::GoalPtr& parent_goal);
 
             std::vector<FactoredPlannerPtr> getChildrenPlanner_(const FactoredSpaceInformationPtr& factor) const;
+            std::optional<ompl::base::PlannerStatus> checkForInvalidPlannerStatus_() const;
 
           private:
             RNG rng_;

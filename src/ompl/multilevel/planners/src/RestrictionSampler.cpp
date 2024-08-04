@@ -1,8 +1,8 @@
-#include "ompl/multilevel/planners/factor/RestrictionSampler.h"
+#include "ompl/multilevel/planners/RestrictionSampler.h"
 
 #include "ompl/base/StateSpace.h"
 #include "ompl/multilevel/datastructures/FactoredSpaceInformation.h"
-#include "ompl/multilevel/planners/factor/FactoredPlanner.h"
+#include "ompl/multilevel/planners/FactoredPlanner.h"
 
 #include <algorithm>
 

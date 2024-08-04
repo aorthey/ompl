@@ -4,10 +4,8 @@
 #include "ompl/base/Planner.h"
 #include "ompl/base/SpaceInformation.h"
 #include "ompl/util/ClassForward.h"
-#include "ompl/geometric/planners/rrt/RRTConnect.h"
-#include "ompl/geometric/planners/rrt/RRTtask.h"
-#include "ompl/geometric/planners/rlrt/RLRT.h"
-#include "ompl/multilevel/datastructures/Expected.h"
+#include "ompl/multilevel/planners/RRTtask.h"
+#include "ompl/multilevel/datastructures/helpers/Expected.h"
 
 #include <optional>
 
@@ -25,7 +23,7 @@ namespace ompl {
         const double kDefaultPathRestrictionSurroundingBias = 0.1;
         const double kDefaultSamplingPerturbationValue  = 0.05;
 
-        typedef ompl::geometric::RRTtask BaseTypePlanner;
+        typedef ompl::multilevel::RRTtask BaseTypePlanner;
 
         class FactoredPlanner : public BaseTypePlanner {
           public:
@@ -61,7 +59,6 @@ namespace ompl {
             double sampling_perturbation_bias_{kDefaultSamplingPerturbationValue};
 
             ompl::base::StateSamplerPtr internal_space_sampler_;
-            bool firstRun_{true};
 
             std::vector<FactoredPlannerPtr> children_planner_;
         };

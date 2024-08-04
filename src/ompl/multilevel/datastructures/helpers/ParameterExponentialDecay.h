@@ -36,11 +36,11 @@
 
 /* Author: Andreas Orthey */
 
-#ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_DATASTRUCTURES_EXPONENTIAL_DECAY__
-#define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_DATASTRUCTURES_EXPONENTIAL_DECAY__
+#ifndef OMPL_MULTILEVEL_DATASTRUCTURES_HELPERS_PARAMETEREXPONENTIALDECAY_
+#define OMPL_MULTILEVEL_DATASTRUCTURES_HELPERS_PARAMETEREXPONENTIALDECAY_
 
 #include <ompl/util/Exception.h>
-#include <ompl/multilevel/datastructures/Parameter.h>
+#include <ompl/multilevel/datastructures/helpers/Parameter.h>
 
 #include <cmath>
 

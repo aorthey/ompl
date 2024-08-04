@@ -52,6 +52,8 @@ namespace ompl
         OMPL_CLASS_FORWARD(PathRestriction);
         /** \brief Forward declaration of ompl::multilevel::Head */
         OMPL_CLASS_FORWARD(Head);
+        /** \brief Forward declaration of ompl::multilevel::Tree */
+        OMPL_CLASS_FORWARD(Tree);
         /// @endcond
 
         /** \brief Representation of a path section (not necessarily feasible).
@@ -64,6 +66,7 @@ namespace ompl
         public:
             PathSection() = delete;
             PathSection(const PathRestrictionPtr&);
+            PathSection(const std::vector<ompl::base::State*>&);
             virtual ~PathSection();
 
             std::vector<base::State*> getStates() const;
@@ -73,7 +76,7 @@ namespace ompl
              *  @retval True if feasible and false if only partially feasible
              *  @retval Basepathheadptr Return last valid
              */
-            bool checkMotion(HeadPtr &);
+            std::pair<bool, HeadPtr> checkMotion(const TreePtr& tree, const HeadPtr& head);
 
             /** \brief checks if section is feasible */
             void sanityCheck();
@@ -102,13 +105,13 @@ namespace ompl
 
             void print(std::ostream &ostream = std::cout) const;
 
+            PathRestrictionPtr getRestriction() const;
+
         protected:
             PathRestrictionPtr restriction_;
 
             /** \brief Interpolated section along restriction */
             std::vector<base::State *> section_states_;
-
-            std::vector<std::pair<base::State*, base::State*>> edges_on_section_;
 
             std::vector<int> sectionBaseStateIndices_;
 
@@ -118,11 +121,6 @@ namespace ompl
             int lastValidIndexOnBasePath_;
 
             base::State *xBaseTmp_{nullptr};
-            base::State *xBundleTmp_{nullptr};
-
-            base::State *xFiberStart_{nullptr};
-            base::State *xFiberGoal_{nullptr};
-            base::State *xFiberTmp_{nullptr};
         };
     }
 }

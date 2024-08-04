@@ -39,8 +39,8 @@
 #ifndef OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_HEAD_
 #define OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_HEAD_
 
-#include <ompl/multilevel/datastructures/pathrestriction/PathRestriction.h>
-#include <ompl/multilevel/datastructures/pathrestriction/SectionNode.h>
+#include "ompl/multilevel/datastructures/pathrestriction/PathRestriction.h"
+#include "ompl/multilevel/datastructures/TreeNode.h"
 
 namespace ompl
 {
@@ -62,7 +62,7 @@ namespace ompl
         class Head
         {
         public:
-            Head(const PathRestrictionPtr& restriction, SectionNode* xCurrent, const base::State* xTarget);
+            Head(const PathRestrictionPtr& restriction, TreeNode* xCurrent, const base::State* xTarget);
 
             Head(const Head &rhs);
 
@@ -70,7 +70,7 @@ namespace ompl
 
             /** \brief Get state to which head points */
             base::State* getState() const;
-            SectionNode* getSectionNode() const;
+            TreeNode* getTreeNode() const;
 
             /** \brief Get projection of state onto fiber space */
             const base::State* getStateFiber() const;
@@ -83,7 +83,7 @@ namespace ompl
             base::State *getStateBaseNonConst() const;
 
             /** \brief Setter for current state */
-            void setCurrent(const base::State *, double);
+            void setCurrent(TreeNode*, double);
 
             /** \brief Get target state */
             base::State *getTargetState() const;
@@ -128,7 +128,7 @@ namespace ompl
             PathRestrictionPtr restriction_{nullptr};
 
             //base::State *xCurrent_{nullptr};
-            SectionNode* xCurrent_{nullptr};
+            TreeNode* xCurrent_{nullptr};
 
             base::State *xBaseCurrent_{nullptr};
             base::State *xFiberCurrent_{nullptr};

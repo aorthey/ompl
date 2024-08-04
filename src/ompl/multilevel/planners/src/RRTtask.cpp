@@ -34,14 +34,15 @@
 
 /* Author: Ioan Sucan */
 
-#include "ompl/geometric/planners/rrt/RRTtask.h"
+#include "ompl/multilevel/planners/RRTtask.h"
 #include <limits>
 #include "ompl/tools/config/SelfConfig.h"
 #include "ompl/multilevel/datastructures/TaskSpaceMotionValidator.h"
 
 const bool debug = false;
+using ompl::multilevel::TreeNode;
 
-ompl::geometric::RRTtask::RRTtask(const base::SpaceInformationPtr &si, bool addIntermediateStates)
+ompl::multilevel::RRTtask::RRTtask(const base::SpaceInformationPtr &si)
   : base::Planner(si, "RRTtask")
 {
     specs_.approximateSolutions = true;
@@ -49,54 +50,55 @@ ompl::geometric::RRTtask::RRTtask(const base::SpaceInformationPtr &si, bool addI
 
     Planner::declareParam<double>("range", this, &RRTtask::setRange, &RRTtask::getRange, "0.:1.:10000.");
     Planner::declareParam<double>("goal_bias", this, &RRTtask::setGoalBias, &RRTtask::getGoalBias, "0.:.05:1.");
-    Planner::declareParam<bool>("intermediate_states", this, &RRTtask::setIntermediateStates, &RRTtask::getIntermediateStates,
-                                "0,1");
 
-    addIntermediateStates_ = addIntermediateStates;
     if(dynamic_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator()) != nullptr) {
       OMPL_INFORM("Using Task Space Capabilities for Planner %s", getName().c_str());
         use_task_space_ = true;
     }else {
       OMPL_INFORM("Not Using Task Space Capabilities for Planner %s", getName().c_str());
     }
-    lastValid.first = si_->allocState();
-    xstate = si_->allocState();
-    rmotion = new Motion(si_);
-    rstate = rmotion->state;
+    ///lastValid.first = si_->allocState();
+    //xstate = si_->allocState();
+    random_node = new TreeNode(si_);
+    //rstate = random_node->getState();
 }
 
-ompl::geometric::RRTtask::~RRTtask()
+ompl::multilevel::RRTtask::~RRTtask()
 {
-    freeMemory();
-    si_->freeState(lastValid.first);
-    si_->freeState(xstate);
-    if (rmotion->state != nullptr)
-        si_->freeState(rmotion->state);
-    delete rmotion;
+    //freeMemory();
+    ///si_->freeState(lastValid.first);
+    //si_->freeState(xstate);
+    if (random_node->getState() != nullptr)
+        si_->freeState(random_node->getState());
+    delete random_node;
 
 }
 
-void ompl::geometric::RRTtask::clear()
+void ompl::multilevel::RRTtask::clear()
 {
     Planner::clear();
     sampler_.reset();
-    freeMemory();
-    if (nn_)
-        nn_->clear();
-    nodes_.clear();
+    tree_->clear();
+    if(tree_->size() != 0) {
+      throw ompl::Exception("Could not clear tree");
+    }
+    //freeMemory();
+    //nodes_.clear();
     lastGoalMotion_ = nullptr;
     first_run_ = true;
 }
 
-void ompl::geometric::RRTtask::setup()
+void ompl::multilevel::RRTtask::setup()
 {
     Planner::setup();
     tools::SelfConfig sc(si_, getName());
-    sc.configurePlannerRange(maxDistance_);
+    sc.configurePlannerRange(maxRange_);
 
-    if (!nn_)
-        nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<Motion *>(this));
-    nn_->setDistanceFunction([this](const Motion *a, const Motion *b) { return distanceFunction(a, b); });
+    // if (!nn_)
+    //     nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<TreeNode *>(this));
+    // nn_->setDistanceFunction([this](const TreeNode *a, const TreeNode *b) { return distance(a, b); });
+
+    tree_ = std::make_shared<Tree>(si_);
     first_run_ = true;
 
     if (!pdef_)
@@ -113,22 +115,42 @@ void ompl::geometric::RRTtask::setup()
     }
 }
 
-void ompl::geometric::RRTtask::freeMemory()
+// void ompl::multilevel::RRTtask::freeMemory()
+// {
+//     // if (nn_)
+//     // {
+//     //     std::vector<TreeNode *> n;
+//     //     nn_->list(motions);
+//     //     for (auto &motion : motions)
+//     //     {
+//     //         if (motion->getState() != nullptr)
+//     //             si_->freeState(motion->getState());
+//     //         delete motion;
+//     //     }
+//     // }
+// }
+
+void ompl::multilevel::RRTtask::setGoalBias(double goalBias)
 {
-    if (nn_)
-    {
-        std::vector<Motion *> motions;
-        nn_->list(motions);
-        for (auto &motion : motions)
-        {
-            if (motion->state != nullptr)
-                si_->freeState(motion->state);
-            delete motion;
-        }
-    }
+    goalBias_ = goalBias;
 }
 
-bool ompl::geometric::RRTtask::shouldSampleGoal(const ompl::base::GoalSampleableRegion* goal, size_t iteration_counter) {
+double ompl::multilevel::RRTtask::getGoalBias() const
+{
+    return goalBias_;
+}
+
+void ompl::multilevel::RRTtask::setRange(double range)
+{
+    maxRange_ = range;
+}
+
+double ompl::multilevel::RRTtask::getRange() const
+{
+    return maxRange_;
+}
+
+bool ompl::multilevel::RRTtask::shouldSampleGoal(const ompl::base::GoalSampleableRegion* goal, size_t iteration_counter) {
   if(goal == nullptr) {
     OMPL_WARN("Cannot sample goal.");
     return false;
@@ -141,8 +163,8 @@ bool ompl::geometric::RRTtask::shouldSampleGoal(const ompl::base::GoalSampleable
     OMPL_WARN("No goal bias.");
     return false;
   }
-  if(!(iteration_counter > 0)) {
-    return false;
+  if(iteration_counter < 1) {
+    return true;
   }
   if(rng_.uniform01() > goalBias_) {
     return false;
@@ -150,32 +172,26 @@ bool ompl::geometric::RRTtask::shouldSampleGoal(const ompl::base::GoalSampleable
   return true;
 }
 
-ompl::geometric::RRTtask::Motion* ompl::geometric::RRTtask::AddConfigAndParent(const ompl::base::State* state, ompl::geometric::RRTtask::Motion* parent) {
-  auto *motion = new Motion(si_);
-  si_->copyState(motion->state, state);
-  motion->parent = parent;
-  nn_->add(motion);
-  nodes_.push_back(motion);
-  return motion;
+TreeNode* ompl::multilevel::RRTtask::makeRootNode() {
+    while (const base::State *st = pis_.nextStart())
+    {
+        return tree_->addNodeAndParent(st, nullptr);
+    }
+    return nullptr;
 }
 
-ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTerminationCondition &ptc)
+ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTerminationCondition &ptc)
 {
     if(first_run_) {
       first_run_ = false;
       checkValidity();
-      while (const base::State *st = pis_.nextStart())
-      {
-          // auto *motion = new Motion(si_);
-          // si_->copyState(motion->state, st);
-          // nn_->add(motion);
-          AddConfigAndParent(st, nullptr);
-      }
-      if (nn_->size() == 0)
-      {
-          OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
-          return base::PlannerStatus::INVALID_START;
-      }
+      makeRootNode();
+    }
+
+    if (tree_->size() == 0)
+    {
+        OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
+        return base::PlannerStatus::INVALID_START;
     }
 
     base::Goal *goal = pdef_->getGoal().get();
@@ -185,10 +201,10 @@ ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTer
         sampler_ = si_->allocStateSampler();
     }
 
-    OMPL_DEBUG("%s: Start planning with %u states already in datastructure", getName().c_str(), nn_->size());
+    OMPL_DEBUG("%s: Start planning with %u states already in datastructure", getName().c_str(), tree_->size());
 
-    Motion *solution = nullptr;
-    Motion *approxsol = nullptr;
+    TreeNode *solution = nullptr;
+    TreeNode *approxsol = nullptr;
     double approxdif = std::numeric_limits<double>::infinity();
 
     if ((goal_s == nullptr) || !goal_s->canSample()) {
@@ -203,30 +219,30 @@ ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTer
             if(debug) {
               OMPL_WARN("Sampling goal");
             }
-            goal_s->sampleGoal(rstate);
+            goal_s->sampleGoal(random_node->getState());
         }
         else
         {
             if(debug) {
               OMPL_DEBUG("Sample state");
             }
-            sampler_->sampleUniform(rstate);
+            sampler_->sampleUniform(random_node->getState());
         }
         iteration_counter_++;
 
         if(debug) {
-          si_->printState(rstate);
+          si_->printState(random_node->getState());
         }
         /* find closest state in the tree */
-        Motion *nmotion = nn_->nearest(rmotion);
-        base::State *dstate = rstate;
+        TreeNode *nearest_node = tree_->nearest(random_node);
+        base::State *new_state = random_node->getState();
 
         if(debug) {
         OMPL_DEBUG("Nearest state:");
-        si_->printState(nmotion->state);
+        si_->printState(nearest_node->getState());
         }
         /* find state to add */
-        double d = si_->distance(nmotion->state, rstate);
+        double d = si_->distance(nearest_node->getState(), random_node->getState());
         if (d >= std::numeric_limits<double>::infinity()) {
           continue;
         }
@@ -237,81 +253,53 @@ ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTer
         if(use_task_space_) {
 
           auto motion_validator = static_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator());
-          auto states = motion_validator->propagateMotion(nmotion->state, dstate);
+          auto states = motion_validator->propagateMotion(nearest_node->getState(), new_state);
           if(states.size() <= 1) {
             continue;
           }
 
           for (std::size_t i = 1; i < states.size(); ++i)
           {
-              // auto *motion = new Motion;
-              // motion->state = states[i]; motion->parent = nmotion;
-              // nn_->add(motion);
-              nmotion = AddConfigAndParent(states[i], nmotion);
-
-              //nmotion = motion;
+              nearest_node = tree_->addNodeAndParent(states[i], nearest_node);
           }
           if(debug) {
             OMPL_DEBUG("Reached new state:");
-            si_->printState(nmotion->state);
+            si_->printState(nearest_node->getState());
           }
         } else {
           //Default checkMotion
-          if (d > maxDistance_)
+          if (d > maxRange_)
           {
-              si_->getStateSpace()->interpolate(nmotion->state, rstate, maxDistance_ / d, xstate);
-              dstate = xstate;
+              si_->getStateSpace()->interpolate(nearest_node->getState(), random_node->getState(), maxRange_ / d, new_state);
           }
-          // auto reached = si_->checkMotion(nmotion->state, dstate, lastValid);
-          // if (reached || lastValid.second > 0.0) //si_->checkMotion(nmotion->state, dstate, lastValid))
-          // {
-          //     if(!reached) {
-          //       dstate = lastValid.first;
-          //     }
-          //     auto *motion = new Motion(si_);
-          //     si_->copyState(motion->state, dstate);
-          //     motion->parent = nmotion;
-          //     nn_->add(motion);
-
-          //     nmotion = motion;
-          // }
           if(debug) {
             OMPL_DEBUG("New state:");
-            si_->printState(dstate);
+            si_->printState(new_state);
           }
-          if (si_->checkMotion(nmotion->state, dstate))
+          if (si_->checkMotion(nearest_node->getState(), new_state))
           {
               if(debug) {
                 OMPL_DEBUG("Added valid connection:");
-                si_->printState(nmotion->state);
-                si_->printState(dstate);
+                si_->printState(nearest_node->getState());
+                si_->printState(new_state);
               }
-              // if(!reached) {
-              //   dstate = lastValid.first;
-              // }
-              // auto *motion = new Motion(si_);
-              // si_->copyState(motion->state, dstate);
-              // motion->parent = nmotion;
-              // nn_->add(motion);
-              nmotion = AddConfigAndParent(dstate, nmotion);
-
-              //nmotion = motion;
+              nearest_node = tree_->addNodeAndParent(new_state, nearest_node);
           } else {
             continue;
           }
         }
         double dist = 0.0;
-        bool sat = goal->isSatisfied(nmotion->state, &dist);
+        bool sat = goal->isSatisfied(nearest_node->getState(), &dist);
         if (sat)
         {
             approxdif = dist;
-            solution = nmotion;
+            solution = nearest_node;
             break;
         }
         if (dist < approxdif)
         {
             approxdif = dist;
-            approxsol = nmotion;
+            approxsol = nearest_node;
         }
     }
 
@@ -322,48 +310,58 @@ ompl::base::PlannerStatus ompl::geometric::RRTtask::solve(const base::PlannerTer
         solution = approxsol;
         approximate = true;
     }
+    makeSolutionPath(solution, approximate, approxdif);
 
-    if (solution != nullptr)
-    {
-        lastGoalMotion_ = solution;
-
-        /* construct the solution path */
-        std::vector<Motion *> mpath;
-        while (solution != nullptr)
-        {
-            mpath.push_back(solution);
-            solution = solution->parent;
-        }
-
-        /* set the solution path */
-        auto path(std::make_shared<PathGeometric>(si_));
-        for (int i = mpath.size() - 1; i >= 0; --i)
-            path->append(mpath[i]->state);
-        pdef_->addSolutionPath(path, approximate, approxdif, getName());
-        solved = true;
-    }
-
-    OMPL_DEBUG("%s: Created %u states", getName().c_str(), nn_->size());
+    OMPL_DEBUG("%s: Created %u states", getName().c_str(), tree_->size());
 
     return {solved, approximate};
 }
 
-void ompl::geometric::RRTtask::getPlannerData(base::PlannerData &data) const
+void ompl::multilevel::RRTtask::makeSolutionPath(TreeNode* last_node, bool approximate, double approxdif) {
+    if (last_node == nullptr)
+    {
+      return;
+    }
+
+    //OMPL_DEBUG("Found solution at goal state");
+    //si_->printState(last_node->getState());
+    lastGoalMotion_ = last_node;
+
+    std::vector<TreeNode *> solution_path;
+    auto current_node(last_node);
+    while (current_node != nullptr)
+    {
+        solution_path.push_back(current_node);
+        current_node = current_node->getParent();
+    }
+
+    auto path(std::make_shared<geometric::PathGeometric>(si_));
+
+    for (int i = solution_path.size() - 1; i >= 0; --i) {
+        auto state = solution_path.at(i)->getState();
+        path->append(state);
+    }
+    // OMPL_DEBUG("Found solution path with %d states.", path->getStateCount());
+    // for(const auto& state : path->getStates()) {
+    //     si_->printState(state);
+    // }
+    pdef_->addSolutionPath(path, approximate, approxdif, getName());
+}
+
+void ompl::multilevel::RRTtask::getPlannerData(base::PlannerData &data) const
 {
     Planner::getPlannerData(data);
 
-    std::vector<Motion *> motions;
-    if (nn_)
-        nn_->list(motions);
+    std::vector<TreeNode *> motions = tree_->getNodes();
 
     if (lastGoalMotion_ != nullptr)
-        data.addGoalVertex(base::PlannerDataVertex(lastGoalMotion_->state));
+        data.addGoalVertex(base::PlannerDataVertex(lastGoalMotion_->getState()));
 
     for (auto &motion : motions)
     {
-        if (motion->parent == nullptr)
-            data.addStartVertex(base::PlannerDataVertex(motion->state));
+        if (motion->getParent() == nullptr)
+            data.addStartVertex(base::PlannerDataVertex(motion->getState()));
         else
-            data.addEdge(base::PlannerDataVertex(motion->parent->state), base::PlannerDataVertex(motion->state));
+            data.addEdge(base::PlannerDataVertex(motion->getParent()->getState()), base::PlannerDataVertex(motion->getState()));
     }
 }

@@ -1,16 +1,18 @@
-#include "ompl/multilevel/planners/factor/FactoredPlanner.h"
-#include "ompl/multilevel/planners/factor/RestrictionSampler.h"
+#include "ompl/multilevel/planners/FactoredPlanner.h"
+#include "ompl/multilevel/planners/RestrictionSampler.h"
 #include "ompl/multilevel/datastructures/FactoredSpaceInformation.h"
 #include <ompl/multilevel/datastructures/pathrestriction/PathRestriction.h>
 #include <ompl/multilevel/datastructures/pathrestriction/PathSection.h>
 #include <ompl/multilevel/datastructures/pathrestriction/FindSectionSideStep.h>
+#include <ompl/multilevel/datastructures/pathrestriction/PathRestrictionInterpolator.h>
+#include <ompl/multilevel/datastructures/pathrestriction/ParallelFibrationSectionSolver.h>
 
 #include <string>
 
 using namespace ompl::multilevel;
 
 FactoredPlanner::FactoredPlanner(const FactoredSpaceInformationPtr& si, const std::vector<FactoredPlannerPtr>& children_planner) 
-  : BaseTypePlanner(si, false), children_planner_(children_planner)
+  : BaseTypePlanner(si), children_planner_(children_planner)
 {
   setName("PlannerOn" + si->getName());
 
@@ -20,7 +22,6 @@ FactoredPlanner::FactoredPlanner(const FactoredSpaceInformationPtr& si, const st
   {
     sampler_ = std::make_shared<RestrictionSampler>(si, children_planner);
   }
-  setIntermediateStates(false);
 }
 
 ompl::base::State* FactoredPlanner::MakeStartState() const {
@@ -49,75 +50,121 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
     return failure("Factor has no children.");
   }
 
-  if (children.size() != 1)
-  {
-    return failure("Factor has more than 1 child. NYI.");
-  }
-  if (children_planner_.size() != 1)
-  {
-    return failure("Children planners has more than 1 child. NYI.");
-  }
-
-  auto child = children.front();
-
-  auto projection = child->getProjection();
-  if (projection == nullptr)
-  {
-    return failure("Child has no projection.");
-  }
-
-  if(!projection->isFibered())
-  {
-    return failure("Projection is not fibered.");
-  }
-
-  auto child_planner = children_planner_.front();
-  const auto& pdef = child_planner->getProblemDefinition();
-  if(!pdef->hasSolution()) 
-  {
-    return failure("Base space has no solution.");
-  }
-
-  const auto base_path = pdef->getSolutionPath();
-
-  auto path_restriction = std::make_shared<PathRestriction>(factor, projection);
-  path_restriction->setBasePath(base_path);
-
-  auto find_section = std::make_shared<FindSectionSideStep>(path_restriction);
-
-  auto qStart = MakeStartState();
   auto qGoal = MakeGoalState();
 
-  ompl::time::point tStart = ompl::time::now();
-  auto maybe_section = find_section->solve(qStart, qGoal);
-  ompl::time::point tEnd = ompl::time::now();
+////////////////////////////////////////////////////////////////////////////////
+// Sequential fibration
+////////////////////////////////////////////////////////////////////////////////
+  if (children.size() == 1)
+  {
+    if (children_planner_.size() != 1)
+    {
+      return failure("Children planner size has to be equivalent to children size.");
+    }
 
-  if(!maybe_section.has_value()) {
-    return failure("Timeout after " + std::to_string(ompl::time::seconds(tEnd - tStart)) + "s");
+    auto child = children.front();
+
+    auto projection = child->getProjection();
+    if (projection == nullptr)
+    {
+      return failure("Child has no projection.");
+    }
+
+    if(!projection->isFibered())
+    {
+      return failure("Projection is not fibered.");
+    }
+
+    auto child_planner = children_planner_.front();
+    const auto& pdef = child_planner->getProblemDefinition();
+    if(!pdef->hasSolution()) 
+    {
+      return failure("Base space has no solution.");
+    }
+
+    const auto base_path = pdef->getSolutionPath();
+
+    auto path_restriction = std::make_shared<PathRestriction>(factor, projection);
+    path_restriction->setBasePath(base_path);
+
+    auto find_section = std::make_shared<FindSectionSideStep>(path_restriction);
+
+    ompl::time::point tStart = ompl::time::now();
+    auto maybe_section = find_section->solve(tree_, qGoal);
+    ompl::time::point tEnd = ompl::time::now();
+
+    if(!maybe_section.has_value()) {
+      return failure("Timeout after " + std::to_string(ompl::time::seconds(tEnd - tStart)) + "s");
+    }
+
+    auto section = maybe_section.value();
+
+    return success(maybe_section.value());
   }
 
-  auto section = maybe_section.value();
-  OMPL_WARN("Found section with %d states.", section->size());
-  for(const auto& state : section->getStates()) {
-    factor->printState(state);
+////////////////////////////////////////////////////////////////////////////////
+// Parallel/Partial fibration
+////////////////////////////////////////////////////////////////////////////////
+  std::unordered_map<std::string, PathRestrictionPtr> path_restrictions;
+
+  for(const auto& child_planner : children_planner_) {
+    auto child = std::static_pointer_cast<FactoredSpaceInformation>(child_planner->getSpaceInformation());
+    auto projection = child->getProjection();
+    if (projection == nullptr)
+    {
+      return failure("Child has no projection.");
+    }
+    auto pdef = child_planner->getProblemDefinition();
+    if(!pdef->hasSolution()) 
+    {
+      return failure("Base space has no solution.");
+    }
+    const auto base_path = pdef->getSolutionPath();
+
+    auto path_restriction = std::make_shared<PathRestriction>(factor, projection);
+    path_restriction->setBasePath(base_path);
+    path_restrictions[child->getName()] = path_restriction;
   }
-  return success(maybe_section.value());
+
+  auto maybe_section = parallelFibrationSectionSolver(factor, tree_, path_restrictions);
+  if(maybe_section.has_value()) {
+    return success(maybe_section.value());
+  }
+  return failure("Could not find section");
 }
 
 ompl::base::PlannerStatus FactoredPlanner::solve(const ompl::base::PlannerTerminationCondition &ptc) 
 {
-  if(firstRun_) {
-    firstRun_ = false;
+  if(first_run_) {
+    first_run_ = false;
+
+    checkValidity();
+    makeRootNode();
+
+    if (tree_->size() == 0)
+    {
+        OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
+        return base::PlannerStatus::INVALID_START;
+    }
+
     auto maybe_section = solveSection();
-    if(!maybe_section.has_value()) {
-      OMPL_WARN("No valid section found. Reason: %s", maybe_section.error().c_str());
+    if(maybe_section.has_value()) {
+        base::Goal *goal = pdef_->getGoal().get();
+        if(goal->isSatisfied(maybe_section.value()->back())) {
+          auto nodes = tree_->getNodes();
+          for(const auto& node : nodes) {
+            if(goal->isSatisfied(node->getState())) {
+              makeSolutionPath(node, false, 0.0);
+              return {true, false};
+            }
+          }
+        }
     }
   }
   return BaseTypePlanner::solve(ptc);
 }
 
 void FactoredPlanner::clear() {
-  firstRun_ = false;
 }
 
 void FactoredPlanner::setPathRestrictionSamplingBias(double path_restriction_sampling_bias) {
@@ -196,7 +243,7 @@ void FactoredPlanner::sampleFromPath(const std::vector<base::State *>& path_stat
 }
 
 size_t FactoredPlanner::getNumberOfSamples() const {
-  return nodes_.size();
+  return tree_->size();
 }
 
 void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state) 
@@ -238,9 +285,9 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
     //}
 
     //Tree restriction sampling (vertex version). RRT style
-    const size_t N = nodes_.size();
+    const size_t N = tree_->size();
     const size_t R = rng_.uniformInt(0, N-1);
-    si_->getStateSpace()->copyState(state, nodes_.at(R)->state);
+    si_->getStateSpace()->copyState(state, tree_->getNodes().at(R)->getState());
 
     //if(random_config->parent == nullptr) {
     //  si_->copyState(state, random_config->state);

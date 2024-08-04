@@ -36,8 +36,8 @@
 
 /* Author: Andreas Orthey */
 
-#ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_BUNDLE_SUBSPACE_FACTORY__
-#define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_BUNDLE_SUBSPACE_FACTORY__
+#ifndef OMPL_MULTILEVEL_DATASTRUCTURES_PROJECTIONFACTORY_
+#define OMPL_MULTILEVEL_DATASTRUCTURES_PROJECTIONFACTORY_
 #include <ompl/multilevel/datastructures/ProjectionTypes.h>
 #include <ompl/base/State.h>
 #include <ompl/base/StateSpace.h>

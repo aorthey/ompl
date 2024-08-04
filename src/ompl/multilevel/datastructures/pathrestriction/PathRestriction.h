@@ -113,7 +113,7 @@ namespace ompl
             void setBasePath(std::vector<base::State *>);
 
             /** \brief Return discrete states representation of base path */
-            const std::vector<base::State *>& getBasePath() const;
+            const std::vector<base::State*>& getBasePath() const;
 
             /** \brief Choose algorithm to find sections over restriction */
             void setFindSectionStrategy(FindSectionType type);

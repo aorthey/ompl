@@ -42,6 +42,7 @@
 #include <ompl/multilevel/datastructures/pathrestriction/FindSection.h>
 #include <ompl/multilevel/datastructures/Projection.h>
 #include <ompl/multilevel/datastructures/projections/FiberedProjection.h>
+#include <ompl/multilevel/datastructures/Tree.h>
 
 namespace ompl
 {
@@ -112,45 +113,39 @@ FindSection::~FindSection()
     bundle->freeState(xBundleTmp_);
 }
 
-SectionNode* FindSection::addAsNode(const base::State* state) {
-  auto node = new SectionNode(restriction_->getSpaceInformation(), state);
-  nodes_.push_back(node);
-  return node;
-}
+// bool FindSection::findFeasibleStateOnFiber(const ompl::base::State *xBase, ompl::base::State *xBundle)
+// {
+//     unsigned int ctr = 0;
+//     bool found = false;
 
-bool FindSection::findFeasibleStateOnFiber(const ompl::base::State *xBase, ompl::base::State *xBundle)
-{
-    unsigned int ctr = 0;
-    bool found = false;
+//     auto projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
 
-    auto projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
+//     auto bundle = projection->getBundle();
+//     auto base = projection->getBundle();
 
-    auto bundle = projection->getBundle();
-    auto base = projection->getBundle();
+//     if (projection->getCoDimension() > 0)
+//     {
+//         const ompl::base::StateSamplerPtr samplerFiber = projection->getFiberSamplerPtr();
 
-    const ompl::base::StateSamplerPtr samplerFiber = projection->getFiberSamplerPtr();
+//         while (ctr++ < magic::PATH_SECTION_MAX_FIBER_SAMPLING && !found)
+//         {
+//             samplerFiber->sampleUniform(xFiberTmp_);
 
-    if (projection->getCoDimension() > 0)
-    {
-        while (ctr++ < magic::PATH_SECTION_MAX_FIBER_SAMPLING && !found)
-        {
-            samplerFiber->sampleUniform(xFiberTmp_);
+//             projection->lift(xBase, xFiberTmp_, xBundle);
 
-            projection->lift(xBase, xFiberTmp_, xBundle);
-
-            // New sample must be valid AND not reachable from last valid
-            if (restriction_->getSpaceInformation()->isValid(xBundle))
-            {
-                found = true;
-            }
-        }
-    }
-    else
-    {
-        base->copyState(xBundle, xBase);
-    }
-    return found;
-}
+//             // New sample must be valid AND not reachable from last valid
+//             if (restriction_->getSpaceInformation()->isValid(xBundle))
+//             {
+//                 found = true;
+//             }
+//         }
+//     }
+//     else
+//     {
+//         base->copyState(xBundle, xBase);
+//     }
+//     return found;
+// }
 
 // bool FindSection::tripleStep(HeadPtr &head, const ompl::base::State *sBundleGoal, double locationOnBasePathGoal)
 // {

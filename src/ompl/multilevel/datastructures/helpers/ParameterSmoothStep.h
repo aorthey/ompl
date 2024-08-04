@@ -36,11 +36,11 @@
 
 /* Author: Andreas Orthey */
 
-#ifndef OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_DATASTRUCTURES_PARAMETER_SMOOTH_STEP_
-#define OMPL_MULTILEVEL_PLANNERS_BUNDLESPACE_DATASTRUCTURES_PARAMETER_SMOOTH_STEP_
+#ifndef OMPL_MULTILEVEL_DATASTRUCTURES_HELPERS_PARAMETERSMOOTHSTEP_
+#define OMPL_MULTILEVEL_DATASTRUCTURES_HELPERS_PARAMETERSMOOTHSTEP_
 
 #include <ompl/util/Exception.h>
-#include <ompl/multilevel/datastructures/Parameter.h>
+#include <ompl/multilevel/datastructures/helpers/Parameter.h>
 
 namespace ompl
 {

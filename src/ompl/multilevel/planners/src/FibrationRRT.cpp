@@ -1,4 +1,4 @@
-#include "ompl/multilevel/planners/factor/FibrationRRT.h"
+#include "ompl/multilevel/planners/FibrationRRT.h"
 
 #include <ompl/base/StateSpace.h>
 #include <ompl/base/goals/GoalState.h>
@@ -7,7 +7,7 @@
 #include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
 #include <ompl/multilevel/datastructures/Projection.h>
 #include <ompl/datastructures/PDF.h>
-#include <ompl/multilevel/planners/factor/FactoredPlanner.h>
+#include <ompl/multilevel/planners/FactoredPlanner.h>
 #include <ompl/base/terminationconditions/IterationTerminationCondition.h>
 
 using namespace ompl::multilevel;
@@ -182,7 +182,19 @@ const FactoredSpaceInformationPtr& FibrationRRT::selectFactorUniform_() {
 }
 
 const FactoredSpaceInformationPtr& FibrationRRT::selectFactorLastLevel_() {
-  return active_factors_.back();
+  std::vector<size_t> non_solution_indices;
+  for(size_t index = 0; index < active_factors_.size(); index++) {
+    auto active_factor = active_factors_.at(index);
+  //for(const auto& active_factor : active_factors_) {
+    if(!hasSolution_(active_factor)) {
+      non_solution_indices.push_back(index);
+    }
+  }
+  if(non_solution_indices.empty()) {
+    OMPL_ERROR("No active factors without a solution.");
+  }
+  int index = rng_.uniformInt(0, non_solution_indices.size() - 1);
+  return active_factors_.at(non_solution_indices.at(index));
 }
 
 const FactoredSpaceInformationPtr& FibrationRRT::selectFactor_() {
@@ -481,6 +493,29 @@ std::string FibrationRRT::getBestCostProperty() const {
   return std::to_string(bestCost_);
 }
 
+size_t FibrationRRT::getNumberOfIterations() const {
+  return iterations_;
+}
+
+std::optional<ompl::base::PlannerStatus> FibrationRRT::checkForInvalidPlannerStatus_() const {
+  for(const auto& planner_status : planner_status_per_factor_) {
+    if(planner_status.second == base::PlannerStatus::UNKNOWN) {
+      continue;
+    }
+    if(planner_status.second == base::PlannerStatus::APPROXIMATE_SOLUTION) {
+      continue;
+    }
+    if(planner_status.second == base::PlannerStatus::EXACT_SOLUTION) {
+      continue;
+    }
+    if(planner_status.second == base::PlannerStatus::TIMEOUT) {
+      continue;
+    }
+    return planner_status.second;
+  }
+  return std::nullopt;
+}
+
 ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminationCondition &ptc) {
     ////////////////////////////////////////////////////////////////////////////////
     const auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
@@ -504,12 +539,21 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
     while (!ptc) {
         iterations_++;
 
+        OMPL_DEBUG("%s", std::string(80, '-').c_str());
         OMPL_DEBUG("Iteration %d", iterations_);
+        OMPL_DEBUG("%s", std::string(80, '-').c_str());
 
         const auto& selectedFactor = selectFactor_();
         OMPL_DEBUG("Selected factor %s.", selectedFactor->getName().c_str());
 
         grow_(selectedFactor);
+
+        auto maybe_invalid_planner_status = checkForInvalidPlannerStatus_();
+        if(maybe_invalid_planner_status.has_value()) {
+          planner_status_ = maybe_invalid_planner_status.value();
+          OMPL_WARN("Planner %s has planner status %s", selectedFactor->getName().c_str(), planner_status_.asString().c_str());
+          return planner_status_;
+        }
 
         if(hasSolution_(selectedFactor)) {
           if(!isSolved_(selectedFactor)) {
@@ -522,13 +566,6 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
             if(shouldSmoothSolutionPath(selectedFactor)) {
               smoothSolutionPath(selectedFactor);
             }
-            //DEBUG
-            // const auto pgeo = static_pointer_cast<ompl::geometric::PathGeometric>(getProblemDefinition(name)->getSolutionPath());
-            // for(const auto& state : pgeo->getStates()) {
-            //   selectedFactor->printState(state);
-            // }
-            //DEBUG
-
 
             if(!selectedFactor->hasParent()) {
               OMPL_INFORM(" >>>>>> Found solution on root factor %s", name.c_str());

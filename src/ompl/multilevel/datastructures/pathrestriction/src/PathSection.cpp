@@ -40,6 +40,7 @@
 #include <ompl/multilevel/datastructures/pathrestriction/PathRestriction.h>
 #include <ompl/multilevel/datastructures/pathrestriction/Head.h>
 #include <ompl/multilevel/datastructures/projections/FiberedProjection.h>
+#include <ompl/multilevel/datastructures/Tree.h>
 
 using namespace ompl::multilevel;
 
@@ -55,38 +56,29 @@ void freeStates(const ompl::base::StateSpacePtr& space, std::vector<ompl::base::
     }
 }
 
+PathSection::PathSection(const std::vector<ompl::base::State*>& states) : section_states_(states) {
+}
+
 PathSection::PathSection(const PathRestrictionPtr& restriction) : restriction_(restriction)
 {
     FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
-    if (projection->getCoDimension() > 0)
-    {
-        base::StateSpacePtr fiber = projection->getFiberSpace();
-        xFiberStart_ = fiber->allocState();
-        xFiberGoal_ = fiber->allocState();
-        xFiberTmp_ = fiber->allocState();
-    }
     if (projection->getBaseDimension() > 0)
     {
         auto base = projection->getBase();
         xBaseTmp_ = base->allocState();
     }
     auto bundle = projection->getBundle();
-    xBundleTmp_ = bundle->allocState();
     lastValid_.first = bundle->allocState();
 }
 
 PathSection::~PathSection()
 {
+    if(restriction_ == nullptr) {
+        return;
+    }
     auto projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
     auto bundle = projection->getBundle();
 
-    if (projection->getCoDimension() > 0)
-    {
-        auto fiber = projection->getFiber();
-        fiber->freeState(xFiberStart_);
-        fiber->freeState(xFiberGoal_);
-        fiber->freeState(xFiberTmp_);
-    }
     if (projection->getBaseDimension() > 0)
     {
         auto base = projection->getBase();
@@ -95,12 +87,15 @@ PathSection::~PathSection()
 
     freeStates(bundle, section_states_);
     bundle->freeState(lastValid_.first);
-    bundle->freeState(xBundleTmp_);
 }
 
 void PathSection::resize(unsigned int k) {
   section_states_.resize(k);
   allocStates(restriction_->getProjection()->getBundle(), section_states_);
+}
+
+PathRestrictionPtr PathSection::getRestriction() const {
+  return restriction_;
 }
 
 std::vector<ompl::base::State*> PathSection::getStates() const {
@@ -144,7 +139,6 @@ void PathSection::addBaseStateIndex(const int index) {
 void PathSection::addEdgeToSection(ompl::base::State* xLast, ompl::base::State* xNext)
 {
     section_states_.push_back(xNext);
-    edges_on_section_.push_back(std::make_pair(xLast, xNext));
 }
 
 void PathSection::sanityCheck()
@@ -177,75 +171,57 @@ unsigned int PathSection::size() const
     return section_states_.size();
 }
 
-bool PathSection::checkMotion(HeadPtr &head)
+std::pair<bool, HeadPtr> PathSection::checkMotion(const TreePtr& tree, const HeadPtr &head)
 {
     ProjectionPtr projection = restriction_->getProjection();
 
     auto bundle = projection->getBundle();
     auto base = projection->getBase();
 
+    auto parentNode = head->getTreeNode();
+
+    HeadPtr newHead(head);
     for (unsigned int k = 1; k < section_states_.size(); k++)
     {
         if (restriction_->getSpaceInformation()->checkMotion(head->getState(), section_states_.at(k), lastValid_))
         {
-            //auto xLast = addAsNode(section_states_.at(k));
-            // xLast->parent = head->getState;
-            // double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
-            // head->setCurrent(section_states_.at(k), locationOnBasePath);
+            auto xNext = tree->addNodeAndParent(section_states_.at(k), newHead->getTreeNode());
+            double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
+            newHead->setCurrent(xNext, locationOnBasePath);
 
             if (k < section_states_.size() - 1) {
+              parentNode = xNext;
               continue;
             }
-            //addFeasibleGoalSegment(head->getState(), head->getTargetState());
-            return true;
+            return std::make_pair(true, newHead);
         }
-            //{
-            //    //Configuration *xLast = addFeasibleSegment(head->getState(), section_states_.at(k));
 
-            //    addEdgeToSection(head->getState(), section_states_.at(k));
+        lastValidIndexOnBasePath_ = sectionBaseStateIndices_.at(k - 1);
 
-            //    double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
+        base::State *lastValidBaseState = restriction_->getBasePath().at(lastValidIndexOnBasePath_);
 
-            //    head->setCurrent(section_states_.at(k), locationOnBasePath);
-            //}
-            //else
-            //{
-            //    addFeasibleGoalSegment(head->getState(), head->getTargetState());
-            //    return true;
-            //}
-            // double locationOnBasePath = restriction_->getLengthBasePathUntil(sectionBaseStateIndices_.at(k));
-            // head->setCurrent(section_states_.at(k), locationOnBasePath);
-        // }
-        // else
-        // {
-            lastValidIndexOnBasePath_ = sectionBaseStateIndices_.at(k - 1);
+        projection->project(lastValid_.first, xBaseTmp_);
 
-            base::State *lastValidBaseState = restriction_->getBasePath().at(lastValidIndexOnBasePath_);
+        double distBaseSegment = base->distance(lastValidBaseState, xBaseTmp_);
 
-            projection->project(lastValid_.first, xBaseTmp_);
+        double locationOnBasePath =
+            restriction_->getLengthBasePathUntil(lastValidIndexOnBasePath_) + distBaseSegment;
 
-            double distBaseSegment = base->distance(lastValidBaseState, xBaseTmp_);
+        //############################################################################
+        // Get Last valid
+        //############################################################################
 
-            double locationOnBasePath =
-                restriction_->getLengthBasePathUntil(lastValidIndexOnBasePath_) + distBaseSegment;
-
-            //############################################################################
-            // Get Last valid
-            //############################################################################
-            if (lastValid_.second > 0)
-            {
-                // add last valid into the bundle graph
-                //addEdgeToSection(head->getState(), lastValid_.first);
-                // Configuration *xBundleLastValid = new Configuration(bundle, lastValid_.first);
-                // graph->addConfiguration(xBundleLastValid);
-                // graph->addBundleEdge(head->getState(), xBundleLastValid);
-
-                head->setCurrent(lastValid_.first, locationOnBasePath);
-            }
-            return false;
-        // }
+        if (lastValid_.second > 0)
+        {
+            auto xLast = tree->addNodeAndParent(lastValid_.first, newHead->getTreeNode());
+            newHead->setCurrent(xLast, locationOnBasePath);
+            //head->setCurrent(xLast, locationOnBasePath);
+        } else {
+            newHead->setCurrent(parentNode, locationOnBasePath);
+        }
+        break;
     }
-    return true;
+    return std::make_pair(false, newHead);
 }
 
 

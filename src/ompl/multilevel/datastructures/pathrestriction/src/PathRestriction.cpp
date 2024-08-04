@@ -53,25 +53,7 @@ using namespace ompl::multilevel;
 PathRestriction::PathRestriction(const FactoredSpaceInformationPtr& factor, const ProjectionPtr& projection) :
   factor_(factor), projection_(projection)
 {
-    //setFindSectionStrategy(FindSectionType::SIDE_STEP);
 }
-
-// void PathRestriction::setFindSectionStrategy(FindSectionType type)
-// {
-//     switch (type)
-//     {
-//         case FindSectionType::SIDE_STEP:
-//             findSection_ = std::make_shared<FindSectionSideStep>(factor_, this);
-//             break;
-//         case FindSectionType::NONE:
-//             findSection_ = nullptr;
-//             break;
-//         default:
-//             OMPL_ERROR("Find section strategy unknown: %s", type);
-//             throw ompl::Exception("Unknown Strategy");
-//             break;
-//     }
-// }
 
 PathRestriction::~PathRestriction()
 {

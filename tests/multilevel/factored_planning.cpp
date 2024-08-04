@@ -6,7 +6,7 @@
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/StateSpace.h>
-#include <ompl/multilevel/planners/factor/FibrationRRT.h>
+#include <ompl/multilevel/planners/FibrationRRT.h>
 #include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
 #include <ompl/multilevel/datastructures/projections/SE2_R2.h>
 #include <iostream>
