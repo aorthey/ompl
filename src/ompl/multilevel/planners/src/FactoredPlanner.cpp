@@ -130,7 +130,6 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
     path_restrictions[child->getName()] = path_restriction;
   }
 
-  OMPL_ERROR("SectionSearch: Parallel Fibration");
   auto maybe_section = parallelFibrationSectionSolver(factor, tree_, path_restrictions);
   if(maybe_section.has_value()) {
     return success(maybe_section.value());

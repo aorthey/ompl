@@ -68,7 +68,7 @@ bool stateExistsInOpenNodes(const ompl::multilevel::FactoredSpaceInformationPtr&
 std::optional<PathSectionPtr> partialFibrationSectionSolver(const ompl::multilevel::FactoredSpaceInformationPtr& factor, 
     const TreePtr& tree, const PathRestrictionPtr& restriction, const ompl::base::State* targetState) {
 
-  auto motion_validator = static_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(factor->getMotionValidator());
+  auto motion_validator = std::static_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(factor->getMotionValidator());
 
   auto projection = restriction->getProjection();
   const auto base = projection->getBase();

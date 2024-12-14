@@ -51,7 +51,7 @@ ompl::multilevel::RRTtask::RRTtask(const base::SpaceInformationPtr &si)
     Planner::declareParam<double>("range", this, &RRTtask::setRange, &RRTtask::getRange, "0.:1.:10000.");
     Planner::declareParam<double>("goal_bias", this, &RRTtask::setGoalBias, &RRTtask::getGoalBias, "0.:.05:1.");
 
-    if(dynamic_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator()) != nullptr) {
+    if(std::dynamic_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator()) != nullptr) {
       OMPL_INFORM("Using Task Space Capabilities for Planner %s", getName().c_str());
         use_task_space_ = true;
     }else {
@@ -252,7 +252,7 @@ ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTe
 
         if(use_task_space_) {
 
-          auto motion_validator = static_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator());
+          auto motion_validator = std::static_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator());
           auto states = motion_validator->propagateMotion(nearest_node->getState(), new_state);
           if(states.size() <= 1) {
             continue;

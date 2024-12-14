@@ -27,7 +27,7 @@ FibrationRRT::FibrationRRT(const ompl::base::SpaceInformationPtr &si, float goal
 }
 
 FibrationRRT::FibrationRRT(const FactoredSpaceInformationPtr &factor, float goal_threshold) :
-   FibrationRRT(static_pointer_cast<ompl::base::SpaceInformation>(factor), goal_threshold) {
+   FibrationRRT(std::static_pointer_cast<ompl::base::SpaceInformation>(factor), goal_threshold) {
 }
 
 FibrationRRT::~FibrationRRT() {
@@ -618,7 +618,7 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
     OMPL_INFORM(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
     if(pdef_->hasExactSolution()) {
       planner_status_ = base::PlannerStatus::StatusType::EXACT_SOLUTION;
-      const auto pgeo = static_pointer_cast<ompl::geometric::PathGeometric>(pdef_->getSolutionPath());
+      const auto pgeo = std::static_pointer_cast<ompl::geometric::PathGeometric>(pdef_->getSolutionPath());
       if(pgeo) {
         OMPL_INFORM("Found exact solution of length %f with %d waypoints.", pgeo->length(), pgeo->getStateCount());
       }

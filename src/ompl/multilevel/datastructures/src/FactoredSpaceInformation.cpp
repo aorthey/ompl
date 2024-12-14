@@ -398,7 +398,10 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
     auto it = leaf_node_states.find(name);
     if(it == leaf_node_states.end()) {
       OMPL_ERROR("Could not find leaf node %s in states. Please specify all leaf node states.", name.c_str());
-      throw "LeafNotFoundInState";
+      for(const auto& leaf_node_state : leaf_node_states) {
+        OMPL_ERROR("Leaf node state %s", leaf_node_state.first.c_str());
+      }
+      throw std::runtime_error("LeafNotFoundInState");
     }
   }
 
@@ -410,7 +413,7 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
         });
     if(it == leaf_factors.end()) {
       OMPL_ERROR("Could not find leaf node %s in factors.", name.c_str());
-      throw "LeafNotFoundInState";
+      throw std::runtime_error("LeafNotFoundInState");
     }
   }
   //////////////////////////////////////////////////////////////////////////////////
@@ -421,9 +424,11 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
 
   std::vector<NodeState> node_states;
   for(const auto& leaf_node_state : leaf_node_states) {
-    OMPL_WARN("Add leaf node %s", leaf_node_state.first.c_str());
+    //OMPL_WARN("Add leaf node %s", leaf_node_state.first.c_str());
     node_states.push_back(std::make_pair(leaf_node_state.first, leaf_node_state.second));
   }
+
+  //OMPL_WARN("Projecting states towards root.");
 
   ompl::RNG rng(0);
   while(true) {
@@ -432,6 +437,8 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
     auto name = node_state.first;
 
     auto current_state = node_state.second;
+
+    //OMPL_INFORM("Choose node %s to project (from %d available nodes).", name.c_str(), node_states.size());
 
     //////////////////////////////////////////////////////////////////////////////////
     //Get factor to node
@@ -442,7 +449,7 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
         });
     if(iterator_factor == all_factors.end()) {
       OMPL_ERROR("Could not find leaf node %s in factors.", name.c_str());
-      throw "LeafNotFoundInState";
+      throw std::runtime_error("LeafNotFoundInState");
     }
     const auto& current_factor = *iterator_factor;
 
@@ -476,7 +483,8 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
           }
       );
       if(it == node_states.end()) {
-        // OMPL_INFORM("Unliftable because of space %s. Node states contain %d states.", name.c_str(), node_states.size());
+        // OMPL_INFORM("Child node %s of parent %s is unliftable because it is not in the current node states. Node states contain %d states.", 
+        //     name.c_str(), parent->getName().c_str(), node_states.size());
         // for(const auto& node_state : node_states) {
         //   std::cout << node_state.first << std::endl;
         // }
@@ -486,13 +494,14 @@ void FactoredSpaceInformation::liftLeafStates(const std::unordered_map<std::stri
       auto cit = child_states.find(name);
       if(cit == child_states.end()) {
         OMPL_ERROR("Could not find child node %s in states.", name.c_str());
-        throw "ChildNotNotFoundInState";
+        throw std::runtime_error("ChildNotNotFoundInState");
       }
       child->copyState(cit->second, it->second);
     }
     if(!liftable) {
       continue;
     }
+
     parent->lift(child_states, next_state);
 
     //////////////////////////////////////////////////////////////////////////////////

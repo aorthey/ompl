@@ -1,6 +1,7 @@
 #include <ompl/multilevel/datastructures/pathrestriction/ParallelFibrationSectionSolver.h>
 
 #include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
+#include <ompl/multilevel/datastructures/TaskSpaceMotionValidator.h>
 #include <ompl/multilevel/datastructures/Tree.h>
 #include <ompl/multilevel/datastructures/pathrestriction/PathRestriction.h>
 #include <ompl/multilevel/datastructures/pathrestriction/PathSection.h>
@@ -191,6 +192,11 @@ std::optional<PathSectionPtr> parallelFibrationSectionSolver(const ompl::multile
     const TreePtr& tree, const std::unordered_map<std::string, PathRestrictionPtr>& path_restrictions) {
 
   if(path_restrictions.empty()) {
+    return std::nullopt;
+  }
+
+  if(std::dynamic_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(factor->getMotionValidator()) != nullptr) {
+    OMPL_WARN("Cannot compute section using Task Space constraints");
     return std::nullopt;
   }
 
