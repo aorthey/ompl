@@ -268,13 +268,14 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_LeafNodeLift)
 
 BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ComplexLeafNodeLift)
 {
-  //        A(8)
-  //      /     \
-  //     B(3)   C(5)
-  //     |      /   \
-  //     D(3)  E(2)  F(3)
-  //     |
-  //     G(3)
+  /*        A(8)
+   *      /     \
+   *    B(3)   C(5)
+   *    |      /   \
+   *    D(3)  E(2)  F(3)
+   *    |
+   *    G(3)
+   */
 
     auto A = CreateCubeSpaceInformation(8, "SpaceA");
     auto B = CreateCubeSpaceInformation(3, "SpaceB");
@@ -331,11 +332,12 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ComplexLeafNodeLift)
 
 BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ParallelLeafNodeLift)
 {
-  //        A(8)
-  //      /     \
-  //     B(4)   C(4)
-  //     |       |
-  //     D(2)   E(2)
+  /*        A(8)
+   *      /     \
+   *     B(4)   C(4)
+   *     |       |
+   *     D(2)   E(2)
+   */
 
   OMPL_INFORM("--------------------------------------------------------------start parallel leaf node lift");
     auto A = CreateCubeSpaceInformation(8, "SpaceA");

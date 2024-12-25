@@ -5,11 +5,13 @@
 
 BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_CorrectProjectionToProblemDefinition)
 {
-    //    A(6)
-    //  /     \
-    // B(4)   C(2)
-    // |
-    // D(2)
+    /*    A(6)
+     *  /     \
+     * B(4)   C(2)
+     * |
+     * D(2)
+     */
+
     ompl::base::StateSpacePtr space_A = CreateCubeStateSpace(6);
     space_A->setName("SpaceA");
     auto A = std::make_shared<FactoredSpaceInformation>(space_A);

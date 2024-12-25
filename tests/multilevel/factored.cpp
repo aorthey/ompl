@@ -190,13 +190,14 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_MultiLevelConnection)
 
 BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_DecompositionConnection)
 {
-    //      A(8)
-    //      /\\
-    //     /| \ \
-    //    / |  \  \
-    //   /  |   \   \
-    //  /   |    \    \
-    // B(2) C(2) D(2) E(2)
+    /*      A(8)
+     *      /\\
+     *     /| \ \
+     *    / |  \  \
+     *   /  |   \   \
+     *  /   |    \    \
+     * B(2) C(2) D(2) E(2)
+     */
 
     ompl::base::StateSpacePtr space_A = CreateCubeStateSpace(8);
     space_A->setName("SpaceA");
@@ -259,11 +260,13 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_DecompositionConnection)
 
 BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_FactorTree)
 {
-    //    A(6)
-    //  /     \
-    // B(4)   C(2)
-    // |
-    // D(2)
+    /*    A(6)
+     *  /     \
+     * B(4)   C(2)
+     * |
+     * D(2)
+     */
+
     ompl::base::StateSpacePtr space_A = CreateCubeStateSpace(6);
     space_A->setName("SpaceA");
     auto A = std::make_shared<FactoredSpaceInformation>(space_A);

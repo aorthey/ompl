@@ -12,25 +12,24 @@ ompl::multilevel::Projection_Subspace::Projection_Subspace(ompl::base::StateSpac
   : InclusionProjection(bundleSpace, baseSpace)
 {
   if(!bundleSpace->isCompound()) {
-    OMPL_ERROR("Need a compound space for a subspace projection.");
-    throw "NotACompoundSpace";
+    throw std::domain_error("Not a compound space:" + bundleSpace->getName());
   }
   auto compound_space = bundleSpace->as<base::CompoundStateSpace>();
-  if(subspace_index >= compound_space->getSubspaceCount() || subspace_index < 0) {
-    OMPL_ERROR("Subspace index has to be valid (%d is not in [%d, %d]).", subspace_index, 0, compound_space->getSubspaceCount());
-    throw "InvalidSubspaceIndex";
+  if(subspace_index >= compound_space->getSubspaceCount()) {
+    throw std::domain_error("Subspace index has to be valid, but " + std::to_string(subspace_index) 
+       + " is larger than " + std::to_string(compound_space->getSubspaceCount()));
   }
+
   immersion_space_ = compound_space->getSubspace(subspace_index);
   if(immersion_space_->getType() != baseSpace->getType()) {
-    OMPL_ERROR("Subspace type (%d) has to be equal to base space type (%d).", immersion_space_->getType(), baseSpace->getType());
-    throw "InvalidBaseSpaceType";
+    throw std::domain_error("Subspace type "+std::to_string(immersion_space_->getType())+" has to be equal to base space type "+ std::to_string(baseSpace->getType()));
   }
   if(!(immersion_space_->covers(baseSpace) && baseSpace->covers(immersion_space_))) {
     OMPL_ERROR("Subspace has to be equal to base space.");
     OMPL_ERROR("Base space has dimension %d (type %d) but subspace has dimension %d (type %d).",
     baseSpace->getDimension(), baseSpace->getType(),
     immersion_space_->getDimension(), immersion_space_->getType());
-    throw "InvalidBaseSpace";
+    throw std::domain_error("InvalidBaseSpace");
   }
 
   subspace_index_ = subspace_index;

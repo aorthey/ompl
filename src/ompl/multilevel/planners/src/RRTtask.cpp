@@ -330,7 +330,6 @@ void ompl::multilevel::RRTtask::makeSolutionPath(TreeNode* last_node, bool appro
     }
 
     //OMPL_DEBUG("Found solution at goal state");
-    //si_->printState(last_node->getState());
     lastGoalMotion_ = last_node;
 
     std::vector<TreeNode *> solution_path;

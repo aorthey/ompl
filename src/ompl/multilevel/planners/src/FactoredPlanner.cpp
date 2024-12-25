@@ -259,7 +259,7 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
 
     //Path restriction sampling
     if(path_restriction_sampling_bias_ > 0.0) {
-      if(path_restriction_sampling_bias_ >= 1.0 || rng_.uniform01() < path_restriction_sampling_bias_) {
+      if(rng_.uniform01() < path_restriction_sampling_bias_) {
         const auto& pdef = getProblemDefinition();
         if(!pdef->hasSolution()) 
         {

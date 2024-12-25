@@ -69,6 +69,11 @@ namespace ompl
             void setPathRestrictionSurroundingSamplingBias(const std::string& name, double path_restriction_surrounding_sampling_bias);
             void setSamplingPerturbationBias(const std::string& name, double sampling_perturbation_bias);
 
+            double getRange() const;
+            double getGoalBias() const;
+            double getPathRestrictionSamplingBias() const;
+            double getPathRestrictionSurroundingSamplingBias() const;
+            double getSamplingPerturbationBias() const;
 
           protected:
             bool shouldSmoothSolutionPath(const FactoredSpaceInformationPtr& factor);

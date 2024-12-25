@@ -22,8 +22,17 @@ FibrationRRT::FibrationRRT(const ompl::base::SpaceInformationPtr &si, float goal
   //addPlannerProgressProperty("iterations INTEGER", [this] { return getIterationsProperty(); });
   //addPlannerProgressProperty("best cost REAL", [this] { return getBestCostProperty(); });
 
-  //Planner::declareParam<double>("range", this, &FibrationRRT::setRange, &FibrationRRT::getRange, "0.:1.:10000.");
-  //Planner::declareParam<bool>("smoothIntermediateSolutions", this, &FibrationRRT::setSmoothIntermediateSolutions, &FibrationRRT::getSmoothIntermediateSolutions, "0,1");
+  // Planner::declareParam<double>("range", this, 
+  //     &FibrationRRT::setRange, &FibrationRRT::getRange, "0.:1.:10000.");
+  // Planner::declareParam<double>("goal_bias", this, 
+  //     &FibrationRRT::setGoalBias, &FibrationRRT::getGoalBias, "0.0:0.05:1.0");
+  // Planner::declareParam<double>("path_restriction_sampling_bias", this, 
+  //     &FibrationRRT::setPathRestrictionSamplingBias, &FibrationRRT::getPathRestrictionSamplingBias, "0.0:0.0:1.0");
+  // Planner::declareParam<double>("path_restriction_surrounding_sampling_bias", this, 
+  //     &FibrationRRT::setPathRestrictionSurroundingSamplingBias, &FibrationRRT::getPathRestrictionSurroundingSamplingBias, "0.0:0.0:1.0");
+  // Planner::declareParam<double>("sampling_perturbation_bias", this, 
+  //     &FibrationRRT::setSamplingPerturbationBias, &FibrationRRT::getSamplingPerturbationBias, "0.:0.0:10.0");
+
 }
 
 FibrationRRT::FibrationRRT(const FactoredSpaceInformationPtr &factor, float goal_threshold) :
@@ -316,6 +325,31 @@ std::vector<FactoredPlannerPtr> FibrationRRT::getChildrenPlanner_(const Factored
     children_planner.push_back(iterator->second);
   }
   return children_planner;
+}
+
+double FibrationRRT::getRange() const {
+  const auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
+  return range_.at(root->getName());
+}
+
+double FibrationRRT::getGoalBias() const {
+  const auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
+  return goal_bias_.at(root->getName());
+}
+
+double FibrationRRT::getPathRestrictionSamplingBias() const {
+  const auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
+  return path_restriction_sampling_bias_.at(root->getName());
+}
+
+double FibrationRRT::getPathRestrictionSurroundingSamplingBias() const {
+  const auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
+  return path_restriction_surrounding_sampling_bias_.at(root->getName());
+}
+
+double FibrationRRT::getSamplingPerturbationBias() const {
+  const auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
+  return sampling_perturbation_bias_.at(root->getName());
 }
 
 void FibrationRRT::setSmoothIntermediateSolutions(bool smooth_intermediate_solutions) {
