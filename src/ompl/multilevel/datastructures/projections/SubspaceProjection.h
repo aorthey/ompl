@@ -20,8 +20,7 @@ namespace ompl
     }
     namespace multilevel
     {
-        /* \brief A bundle projection with an explicit fiber space representation
-         * which can be explicitly sampled to lift states */
+        /* \brief A bundle projection without an explicit fiber space representation */
         class Projection_Subspace : public InclusionProjection
         {
         public:

@@ -136,7 +136,7 @@ void PathSection::addBaseStateIndex(const int index) {
     sectionBaseStateIndices_.push_back(index);
 }
 
-void PathSection::addEdgeToSection(ompl::base::State* xLast, ompl::base::State* xNext)
+void PathSection::addEdgeToSection(ompl::base::State* /*xLast*/, ompl::base::State* xNext)
 {
     section_states_.push_back(xNext);
 }

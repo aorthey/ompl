@@ -56,11 +56,11 @@ namespace ompl
 
             ~Projection_RN_RM() override = default;
 
-            virtual void projectFiber(const ompl::base::State *xBundle, ompl::base::State *xFiber) const override;
+            void projectFiber(const ompl::base::State *xBundle, ompl::base::State *xFiber) const override;
 
-            virtual void project(const ompl::base::State *xBundle, ompl::base::State *xBase) const override;
+            void project(const ompl::base::State *xBundle, ompl::base::State *xBase) const override;
 
-            virtual void lift(const ompl::base::State *xBase, const ompl::base::State *xFiber,
+            void lift(const ompl::base::State *xBase, const ompl::base::State *xFiber,
                               ompl::base::State *xBundle) const override;
 
             bool isProjectedDimension(size_t input) const;
