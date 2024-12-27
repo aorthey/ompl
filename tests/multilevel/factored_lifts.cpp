@@ -2,6 +2,8 @@
 #include <boost/test/unit_test.hpp>
 
 #include "factorization_common.h"
+#include <ompl/multilevel/datastructures/projections/SubspaceFiberedProjection.h>
+
 #include <ompl/util/Console.h>
 
 BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_InclusionMaps)
@@ -338,8 +340,6 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ParallelLeafNodeLift)
    *     |       |
    *     D(2)   E(2)
    */
-
-  OMPL_INFORM("--------------------------------------------------------------start parallel leaf node lift");
     auto A = CreateCubeSpaceInformation(8, "SpaceA");
     auto B = CreateCubeSpaceInformation(4, "SpaceB");
     auto C = CreateCubeSpaceInformation(4, "SpaceC");
@@ -358,8 +358,8 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ParallelLeafNodeLift)
     BOOST_CHECK(C->addChild(E, projCE));
 
     ////Create states to lift
-    auto stateD = AllocState(D, {1.0, 1.0});
-    auto stateE = AllocState(E, {0.0, 0.0});
+    auto stateD = AllocState(D, {1.0, 2.0});
+    auto stateE = AllocState(E, {5.0, 6.0});
     auto stateA = AllocState(A, {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1});
 
     std::unordered_map<std::string, ompl::base::State*> leafStates;
@@ -369,13 +369,41 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ParallelLeafNodeLift)
     A->liftLeafStates(leafStates, stateA);
     A->printState(stateA);
 
-    // const auto *stateA_RN = stateA->as<ompl::base::RealVectorStateSpace::StateType>();
-    // //States should be ordered
-    // for(size_t k = 0; k < A->getStateDimension(); k++) {
-    //   BOOST_CHECK_CLOSE(stateA_RN->values[k], 0.2+k*0.1, 1e-5);
-    // }
+    const auto *stateA_RN = stateA->as<ompl::base::RealVectorStateSpace::StateType>();
+    //States should be ordered
+    BOOST_CHECK_CLOSE(stateA_RN->values[0], 1.0, 1e-5);
+    BOOST_CHECK_CLOSE(stateA_RN->values[1], 2.0, 1e-5);
+    BOOST_CHECK_CLOSE(stateA_RN->values[4], 5.0, 1e-5);
+    BOOST_CHECK_CLOSE(stateA_RN->values[5], 6.0, 1e-5);
 
     A->freeState(stateA);
     D->freeState(stateD);
     E->freeState(stateE);
+}
+
+BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_SubspaceProjection)
+{
+    auto X = CreateCubeStateSpace(2);
+    X->setName("SpaceX");
+    auto Y = CreateCubeStateSpace(2);
+    Y->setName("SpaceY");
+    auto Z = CreateCubeStateSpace(2);
+    Y->setName("SpaceZ");
+
+  /*     [X, Y, Z]
+   *        |    
+   *     [A, B]   
+   */
+    auto subspaces = std::vector<StateSpacePtr>({X, Y, Z});
+    auto subspace_weights = std::vector<double>({1.0, 1.0, 1.0});
+    auto Aspace = std::make_shared<CompoundStateSpace>(subspaces, subspace_weights);
+    auto A = std::make_shared<FactoredSpaceInformation>(Aspace);
+
+    //auto Bspace = std::make_shared<CompoundStateSpace>({X, Y, Z}, {1.0, 1.0, 1.0});
+    auto B = std::make_shared<FactoredSpaceInformation>(X);
+
+    auto projAB = std::make_shared<Projection_FiberedSubspace>(A, B, 0);
+    BOOST_CHECK(A->addChild(B, projAB));
+
+
 }

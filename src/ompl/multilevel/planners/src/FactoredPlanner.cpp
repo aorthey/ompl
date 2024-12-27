@@ -85,7 +85,7 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
 
     if(projection->isFibered())
     {
-      OMPL_ERROR("SectionSearch: Sequential Fibration");
+      OMPL_INFORM("SectionSearch: Sequential Fibration");
       auto find_section = std::make_shared<FindSectionSideStep>(path_restriction);
       ompl::time::point tStart = ompl::time::now();
       auto maybe_section = find_section->solve(tree_, qGoal);
@@ -96,10 +96,9 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
       }
       return success(maybe_section.value());
     } else {
-      OMPL_ERROR("SectionSearch: Partial Fibration");
+      OMPL_INFORM("SectionSearch: Partial Fibration");
       auto maybe_section = partialFibrationSectionSolver(factor, tree_, path_restriction, qGoal);
       if(!maybe_section.has_value()) {
-        OMPL_ERROR("Found no section");
         return failure("Could not find section");
       }
       return success(maybe_section.value());
@@ -263,7 +262,7 @@ void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state)
         const auto& pdef = getProblemDefinition();
         if(!pdef->hasSolution()) 
         {
-          OMPL_ERROR("Cannot sample from space without a solution.");
+          OMPL_WARN("Cannot sample from space without a solution.");
           return;
         }
         const auto path = pdef->getSolutionPath()->as<geometric::PathGeometric>();

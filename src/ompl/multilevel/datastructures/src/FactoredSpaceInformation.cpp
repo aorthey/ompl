@@ -278,7 +278,7 @@ void FactoredSpaceInformation::project(const base::State* state, const std::unor
   }
   if(children_.size() == 1) {
     if(childStates.size() != 1) {
-      OMPL_ERROR("Number of child states is %d, which is different from children (%d).", childStates.size(), children_.size());
+      OMPL_ERROR("Number of child states for factor %s is %d, which is different from children (%d).", getName().c_str(), childStates.size(), children_.size());
       throw "InvalidStates";
     }
     const auto& child = children_.front();

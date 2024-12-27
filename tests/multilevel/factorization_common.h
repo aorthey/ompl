@@ -6,8 +6,6 @@
 
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/rrt/RRT.h>
-// #include <ompl/multilevel/planners/qrrt/QRRT.h>
-// #include <ompl/multilevel/planners/qmp/QMP.h>
 #include <ompl/multilevel/planners/FibrationRRT.h>
 #include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
 #include <ompl/multilevel/datastructures/projections/RN_RM.h>
@@ -28,11 +26,7 @@ ompl::base::StateSpacePtr CreateCubeStateSpace(size_t dim) {
 }
 
 ompl::multilevel::FactoredSpaceInformationPtr CreateCubeSpaceInformation(size_t dim, std::string name) {
-  ompl::base::StateSpacePtr space(new RealVectorStateSpace(dim));
-  ompl::base::RealVectorBounds bounds_space(dim);
-  bounds_space.setLow(0);
-  bounds_space.setHigh(+1);
-  space->as<RealVectorStateSpace>()->setBounds(bounds_space);
+  auto space = CreateCubeStateSpace(dim);
   space->setName(name);
   return std::make_shared<FactoredSpaceInformation>(space);
 }

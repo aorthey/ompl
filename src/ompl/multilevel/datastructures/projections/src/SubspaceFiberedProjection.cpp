@@ -34,14 +34,21 @@ void ompl::multilevel::Projection_FiberedSubspace::lift(const ompl::base::State 
                               ompl::base::State *xBundle) const 
 {
   inclusionMap(xBase, xBundle);
+  std::cout << std::string(80, '-') << std::endl;
 
+  auto compound_space = getBundle()->as<ompl::base::CompoundStateSpace>();
   auto bundle_state = xBundle->as<base::CompoundState>();
-  auto fiber_state = xFiber->as<base::CompoundState>();
 
+  if(!getFiber()->isCompound()) {
+    auto bundle_index = subspace_bundle_to_subspace_fiber_index_.begin()->first;
+    getFiber()->copyState(bundle_state->operator[](bundle_index), xFiber);
+    return;
+  }
+  auto fiber_state = xFiber->as<base::CompoundState>();
   for(const auto& subspace_indices : subspace_bundle_to_subspace_fiber_index_) {
     auto bundle_index = subspace_indices.first;
     auto fiber_index = subspace_indices.second;
-    getBundle()->copyState(bundle_state->operator[](bundle_index), fiber_state->operator[](fiber_index));
+    compound_space->getSubspace(bundle_index)->copyState(bundle_state->operator[](bundle_index), fiber_state->operator[](fiber_index));
   }
 }
 
@@ -74,13 +81,20 @@ void ompl::multilevel::Projection_FiberedSubspace::inclusionMap(const ompl::base
 
 void ompl::multilevel::Projection_FiberedSubspace::projectFiber(const ompl::base::State *xBundle, ompl::base::State *xFiber) const 
 {
-  auto bundle_state = xBundle->as<base::CompoundState>();
+  const auto bundle_state = xBundle->as<base::CompoundState>();
+  if(!getFiber()->isCompound()) { 
+    auto bundle_index = subspace_bundle_to_subspace_fiber_index_.begin()->first;
+    getFiber()->copyState(xFiber, bundle_state->operator[](bundle_index));
+    return;
+  }
+
   auto fiber_state = xFiber->as<base::CompoundState>();
+  auto compound_space = getFiber()->as<ompl::base::CompoundStateSpace>();
 
   for(const auto& subspace_indices : subspace_bundle_to_subspace_fiber_index_) {
     auto bundle_index = subspace_indices.first;
     auto fiber_index = subspace_indices.second;
-    getBundle()->copyState(fiber_state->operator[](fiber_index), bundle_state->operator[](bundle_index));
+    compound_space->getSubspace(fiber_index)->copyState(fiber_state->operator[](fiber_index), bundle_state->operator[](bundle_index));
   }
 }
 
@@ -106,6 +120,12 @@ ompl::base::StateSpacePtr ompl::multilevel::Projection_FiberedSubspace::computeF
     fiber_index++;
   }
 
+  if(fiber_subspaces.empty()) {
+    throw std::domain_error("Fiber space is empty.");
+  }
+  if(fiber_subspaces.size() == 1) {
+    return fiber_subspaces.front();
+  }
   auto fiber_space = std::make_shared<ompl::base::CompoundStateSpace>(fiber_subspaces, fiber_subspace_weights);
   return fiber_space;
 }

@@ -36,12 +36,10 @@ if (OMPL_BUILD_TESTS)
 
     add_ompl_test(test_multilevel_factored multilevel/factored.cpp)
     add_ompl_test(test_multilevel_factored_lifts multilevel/factored_lifts.cpp)
-    add_ompl_test(test_multilevel_factored_planning multilevel/factored_planning.cpp)
-    add_ompl_test(test_multilevel_factored_path_section multilevel/factored_path_section.cpp)
     add_ompl_test(test_multilevel_factored_multirobot multilevel/factored_multirobot.cpp)
+    add_ompl_test(test_multilevel_factored_path_section multilevel/factored_path_section.cpp)
+    add_ompl_test(test_multilevel_factored_planning multilevel/factored_planning.cpp)
     add_ompl_test(test_multilevel_factored_problem_definitions multilevel/factored_problem_definitions.cpp)
-    #add_ompl_test(test_multilevel_projections multilevel/projections.cpp)
-    #add_ompl_test(test_multilevel_projections_custom multilevel/projections_custom.cpp)
 
     # Test base code
     add_ompl_test(test_halton_sampling base/halton_deterministic_sampling.cpp)
