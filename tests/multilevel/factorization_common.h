@@ -39,6 +39,32 @@ ompl::base::State* AllocState(const ompl::base::SpaceInformationPtr& si, const s
   }
   return state;
 }
+ompl::base::State* AllocCompoundState(const ompl::base::StateSpacePtr& space, const std::vector<float>& vector) {
+  if(!space->isCompound()) {
+    throw std::runtime_error("Requires CompoundStateSpace");
+  }
+  auto state = space->allocState();
+  auto cstate = state->as<CompoundState>();
+
+  auto compound_space = space->as<ompl::base::CompoundStateSpace>();
+  auto subspaces = compound_space->getSubspaces();
+  size_t subspace_index = 0;
+
+  size_t vector_index = 0;
+
+  for(const auto& subspace : subspaces) {
+    for(size_t k = 0; k < subspace->getDimension(); k++) {
+      cstate->operator[](subspace_index)->as<RealVectorStateSpace::StateType>()->values[k] = vector.at(vector_index);
+      vector_index++;
+    }
+    subspace_index++;
+  }
+  return state;
+
+}
+ompl::base::State* AllocCompoundState(const ompl::base::SpaceInformationPtr& si, const std::vector<float>& vector) {
+  return AllocCompoundState(si->getStateSpace(), vector);
+}
 
 ScopedState<> CreateState(const ompl::base::StateSpacePtr& space, const float value, const float step_size = 0.0f) {
   ScopedState<> state(space);

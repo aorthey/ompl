@@ -383,6 +383,11 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ParallelLeafNodeLift)
 
 BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_SubspaceProjection)
 {
+  /*     [X, Y, Z]
+   *      |    
+   *     [X]   
+   */
+
     auto X = CreateCubeStateSpace(2);
     X->setName("SpaceX");
     auto Y = CreateCubeStateSpace(2);
@@ -390,20 +395,54 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_SubspaceProjection)
     auto Z = CreateCubeStateSpace(2);
     Y->setName("SpaceZ");
 
-  /*     [X, Y, Z]
-   *        |    
-   *     [A, B]   
-   */
     auto subspaces = std::vector<StateSpacePtr>({X, Y, Z});
     auto subspace_weights = std::vector<double>({1.0, 1.0, 1.0});
     auto Aspace = std::make_shared<CompoundStateSpace>(subspaces, subspace_weights);
     auto A = std::make_shared<FactoredSpaceInformation>(Aspace);
-
-    //auto Bspace = std::make_shared<CompoundStateSpace>({X, Y, Z}, {1.0, 1.0, 1.0});
     auto B = std::make_shared<FactoredSpaceInformation>(X);
 
     auto projAB = std::make_shared<Projection_FiberedSubspace>(A, B, 0);
     BOOST_CHECK(A->addChild(B, projAB));
 
+    A->printFactorization(std::cout);
 
+    ////////////////////////////////////////////////////////////////////////////////
+    ///Verify that projection works
+    ////////////////////////////////////////////////////////////////////////////////
+    auto stateA = AllocCompoundState(A, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+    auto stateB = AllocState(B, {-1.0, -1.0});
+
+    projAB->project(stateA, stateB);
+
+    const auto *stateB_RN = stateB->as<ompl::base::RealVectorStateSpace::StateType>();
+    BOOST_CHECK_CLOSE(stateB_RN->values[0], 1.0, 1e-5);
+    BOOST_CHECK_CLOSE(stateB_RN->values[1], 2.0, 1e-5);
+
+    ////////////////////////////////////////////////////////////////////////////////
+    /// Project onto fiber and lift base+fiber back to root space
+    ////////////////////////////////////////////////////////////////////////////////
+    auto F = projAB->getFiber();
+    auto stateF = AllocCompoundState(F, {0.0, 0.0, 0.0, 0.0});
+
+    projAB->projectFiber(stateA, stateF);
+    F->printState(stateF);
+
+    BOOST_CHECK(F->isCompound());
+    auto compound_space = F->as<CompoundStateSpace>();
+    BOOST_CHECK_EQUAL(compound_space->getSubspaceCount(), 2u);
+
+    auto stateAprime = AllocCompoundState(A, {0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+
+    double d1 = A->distance(stateA, stateAprime);
+    BOOST_CHECK_GT(d1, 1.0);
+
+    projAB->lift(stateB, stateF, stateAprime);
+
+    double d2 = A->distance(stateA, stateAprime);
+    BOOST_CHECK_CLOSE(d2, 0.0, 1e-5);
+
+    A->freeState(stateA);
+    A->freeState(stateAprime);
+    B->freeState(stateB);
+    F->freeState(stateF);
 }
