@@ -24,8 +24,8 @@ namespace ompl
         class Projection_FiberedSubspace : public FiberedProjection
         {
         public:
-            Projection_FiberedSubspace(const base::SpaceInformationPtr& siBundle, const base::SpaceInformationPtr& siBase, unsigned int subspace_index);
-            Projection_FiberedSubspace(base::StateSpacePtr bundleSpace, base::StateSpacePtr baseSpace, unsigned int subspace_index);
+            Projection_FiberedSubspace(const base::SpaceInformationPtr& siBundle, const base::SpaceInformationPtr& siBase);
+            Projection_FiberedSubspace(base::StateSpacePtr bundleSpace, base::StateSpacePtr baseSpace);
 
             virtual ~Projection_FiberedSubspace() = default;
 
@@ -44,7 +44,7 @@ namespace ompl
             ompl::base::StateSpacePtr computeFiberSpace() override;
 
         private:
-            unsigned int subspace_index_;
+            size_t subspace_index_;
             std::unordered_map<size_t, size_t> subspace_bundle_to_subspace_fiber_index_;
         };
     }

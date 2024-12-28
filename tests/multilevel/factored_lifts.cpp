@@ -401,9 +401,22 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_SubspaceProjection)
     auto A = std::make_shared<FactoredSpaceInformation>(Aspace);
     auto B = std::make_shared<FactoredSpaceInformation>(X);
 
-    auto projAB = std::make_shared<Projection_FiberedSubspace>(A, B, 0);
-    BOOST_CHECK(A->addChild(B, projAB));
+    ////////////////////////////////////////////////////////////////////////////////
+    ///Check that only the correct subspace can be used with a projection
+    ////////////////////////////////////////////////////////////////////////////////
 
+    //Cannot create a projecton when space is not a subspace
+    auto NonExistentSpace = CreateCubeStateSpace(2);
+    NonExistentSpace->setName("NonExistentSpace");
+    BOOST_CHECK_THROW(std::make_shared<Projection_FiberedSubspace>(Aspace, NonExistentSpace), std::exception);
+
+    //Cannot add child when projection points to a different subspace
+    auto projAY = std::make_shared<Projection_FiberedSubspace>(Aspace, Y);
+    BOOST_CHECK(!A->addChild(B, projAY));
+
+    // Correct projection
+    auto projAB = std::make_shared<Projection_FiberedSubspace>(A, B);
+    BOOST_CHECK(A->addChild(B, projAB));
     A->printFactorization(std::cout);
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -425,7 +438,6 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_SubspaceProjection)
     auto stateF = AllocCompoundState(F, {0.0, 0.0, 0.0, 0.0});
 
     projAB->projectFiber(stateA, stateF);
-    F->printState(stateF);
 
     BOOST_CHECK(F->isCompound());
     auto compound_space = F->as<CompoundStateSpace>();

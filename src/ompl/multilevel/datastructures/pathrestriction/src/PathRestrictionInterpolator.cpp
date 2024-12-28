@@ -57,7 +57,6 @@ PathSectionPtr interpolateL1FiberLast(const PathRestrictionPtr& restriction, con
   const auto base = projection->getBase();
 
   int size = head->getNumberOfRemainingStatesOnBasePath() + 1; //remaining + current state
-  OMPL_ERROR("SIZE: %d", size);
 
   if (projection->getCoDimension() > 0)
   {

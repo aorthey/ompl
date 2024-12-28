@@ -3,24 +3,34 @@
 #include <ompl/multilevel/datastructures/projections/SubspaceFiberedProjection.h>
 #include <ompl/base/SpaceInformation.h>
 
-ompl::multilevel::Projection_FiberedSubspace::Projection_FiberedSubspace(
-    const base::SpaceInformationPtr& siBundle, const base::SpaceInformationPtr& siBase, unsigned int subspace_index)
-  : Projection_FiberedSubspace(siBundle->getStateSpace(), siBase->getStateSpace(), subspace_index) {} 
+size_t InferSubspaceindex(ompl::base::StateSpacePtr bundleSpace, ompl::base::StateSpacePtr baseSpace) {
 
-ompl::multilevel::Projection_FiberedSubspace::Projection_FiberedSubspace(ompl::base::StateSpacePtr bundleSpace, 
-    ompl::base::StateSpacePtr baseSpace, unsigned int subspace_index)
-  : FiberedProjection(bundleSpace, baseSpace)
-{
   if(!bundleSpace->isCompound()) {
     throw std::domain_error("Not a compound space:" + bundleSpace->getName());
   }
   auto compound_space = bundleSpace->as<ompl::base::CompoundStateSpace>();
-  if(subspace_index >= compound_space->getSubspaceCount()) {
-    throw std::domain_error("Subspace index has to be valid, but " + std::to_string(subspace_index) 
-       + " is larger than " + std::to_string(compound_space->getSubspaceCount()));
+
+  auto subspaces = compound_space->getSubspaces();
+
+  for(size_t index = 0; index < subspaces.size(); index++) {
+    if(subspaces.at(index)->getName() == baseSpace->getName()) {
+      return index;
+    }
   }
 
-  subspace_index_ = subspace_index;
+  throw std::runtime_error("Could not find space " + baseSpace->getName() + " in parent space "
+      + bundleSpace->getName());
+}
+
+ompl::multilevel::Projection_FiberedSubspace::Projection_FiberedSubspace(
+    const base::SpaceInformationPtr& siBundle, const base::SpaceInformationPtr& siBase)
+  : Projection_FiberedSubspace(siBundle->getStateSpace(), siBase->getStateSpace()) {} 
+
+ompl::multilevel::Projection_FiberedSubspace::Projection_FiberedSubspace(ompl::base::StateSpacePtr bundleSpace, 
+    ompl::base::StateSpacePtr baseSpace)
+  : FiberedProjection(bundleSpace, baseSpace)
+{
+  subspace_index_ = InferSubspaceindex(bundleSpace, baseSpace);
   setType(PROJECTION_SUBSPACE);
 }
 
@@ -34,7 +44,6 @@ void ompl::multilevel::Projection_FiberedSubspace::lift(const ompl::base::State 
                               ompl::base::State *xBundle) const 
 {
   inclusionMap(xBase, xBundle);
-  std::cout << std::string(80, '-') << std::endl;
 
   auto compound_space = getBundle()->as<ompl::base::CompoundStateSpace>();
   auto bundle_state = xBundle->as<base::CompoundState>();
