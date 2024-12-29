@@ -48,7 +48,8 @@
 
 #include <optional>
 
-const bool kDebug = true;
+const bool kDebug = false;
+
 namespace ompl
 {
     namespace magic

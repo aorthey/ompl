@@ -152,14 +152,13 @@ ompl::base::PlannerStatus FactoredPlanner::solve(const ompl::base::PlannerTermin
 
     auto maybe_section = solveSection();
     if(maybe_section.has_value()) {
-        OMPL_WARN("Found section");
         base::Goal *goal = pdef_->getGoal().get();
         if(goal->isSatisfied(maybe_section.value()->back())) {
           auto nodes = tree_->getNodes();
           for(const auto& node : nodes) {
             if(goal->isSatisfied(node->getState())) {
               makeSolutionPath(node, false, 0.0);
-              OMPL_WARN("Return exact");
+              OMPL_DEBUG("Found exact section.");
               return ompl::base::PlannerStatus(ompl::base::PlannerStatus::EXACT_SOLUTION);
             }
           }

@@ -127,7 +127,7 @@ bool FibrationRRT::hasValidProblemDefinition_(const FactoredSpaceInformationPtr&
     }
   }
   if(!has_valid_start) {
-    OMPL_ERROR("No valid start state for factor %s (tried %d states).", factor->getName().c_str(), pdef->getStartStateCount());
+    OMPL_ERROR(">>No valid start state for factor %s (tried %d states).", factor->getName().c_str(), pdef->getStartStateCount());
     for(size_t k = 0; k < pdef->getStartStateCount(); k++) {
       auto state = pdef->getStartState(k);
       if(!factor->satisfiesBounds(state)) {
@@ -135,7 +135,7 @@ bool FibrationRRT::hasValidProblemDefinition_(const FactoredSpaceInformationPtr&
         factor->printState(state);
       }
       if(!factor->isValid(state)) {
-        OMPL_ERROR("State is not valid:");
+        OMPL_ERROR("State is is collision:");
         factor->printState(state);
       }
     }

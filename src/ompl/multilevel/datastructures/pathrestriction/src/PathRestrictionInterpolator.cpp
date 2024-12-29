@@ -62,10 +62,6 @@ PathSectionPtr interpolateL1FiberLast(const PathRestrictionPtr& restriction, con
   {
       const ompl::base::State *xFiberStart = head->getStateFiber();
       const ompl::base::State *xFiberGoal = head->getStateTargetFiber();
-      // OMPL_ERROR("Start:");
-      // projection->getFiber()->printState(xFiberStart);
-      // OMPL_ERROR("Goal:");
-      // projection->getFiber()->printState(xFiberGoal);
 
       section->resize(size + 1);
 

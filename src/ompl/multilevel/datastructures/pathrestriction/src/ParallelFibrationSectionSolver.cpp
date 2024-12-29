@@ -14,20 +14,14 @@ bool checkMotion(const FactoredSpaceInformationPtr& factor, const TreePtr& tree,
   lastValid.first = factor->allocState();
   lastValid.second = 0.0;
 
-  // factor->printState(states.front());
-  // factor->printState(states.back());
   TreeNode* lastNode(node);
   for (unsigned int k = 1; k < states.size(); k++)
   {
       if (!factor->checkMotion(lastNode->getState(), states.at(k), lastValid))
       {
-        //std::cout << "Failed check motion" << std::endl;
-        //factor->printState(lastValid.first);
         return false;
       }
       auto xNext = tree->addNodeAndParent(states.at(k), lastNode);
-      //std::cout << "New state added during check motion" << std::endl;
-      //factor->printState(states.at(k));
       lastNode = xNext;
   }
   return true;
@@ -105,14 +99,6 @@ std::vector<ompl::base::State*> makeSectionPathL2(const FactoredSpaceInformation
     factor->lift(statesChild, state);
     states.push_back(state);
   }
-
-  //////////////////////////////////////////////////////////////////////////////////
-  // Print states
-  //////////////////////////////////////////////////////////////////////////////////
-  // for(const auto& state : states) {
-  //   factor->printState(state);
-  // }
-
   factor->freeChildStates(statesChild);
   return states;
 }
@@ -161,13 +147,10 @@ std::vector<ompl::base::State*> makeSectionPathL1(const FactoredSpaceInformation
           const auto other_name = other_path_restriction.first;
           if(other_name == name) {
             factor->getChild(other_name)->copyState(statesChild.at(other_name), base_state);
-            //factor->getChild(other_name)->printState(statesChild.at(other_name));
             continue;
           }
           auto position = (finished_interpolating.at(other_name) ? other_path_restriction.second->getLengthBasePath() : 0.0);
-          //std::cout << other_name << ":" << position << std::endl;
           other_path_restriction.second->interpolateBasePath(position, statesChild.at(other_name));
-          //factor->getChild(other_name)->printState(statesChild.at(other_name));
         }
 
         auto state = factor->allocState();
@@ -176,13 +159,6 @@ std::vector<ompl::base::State*> makeSectionPathL1(const FactoredSpaceInformation
       }
       finished_interpolating.at(name) = true;
   }
-
-  //////////////////////////////////////////////////////////////////////////////////
-  // Print states
-  //////////////////////////////////////////////////////////////////////////////////
-  // for(const auto& state : states) {
-  //   factor->printState(state);
-  // }
 
   factor->freeChildStates(statesChild);
   return states;
