@@ -2,6 +2,7 @@
 
 #include <ompl/multilevel/datastructures/projections/SubspaceFiberedProjection.h>
 #include <ompl/base/SpaceInformation.h>
+#include <ompl/base/StateSpaceTypes.h>
 
 size_t InferSubspaceindex(ompl::base::StateSpacePtr bundleSpace, ompl::base::StateSpacePtr baseSpace) {
 
@@ -40,6 +41,15 @@ void ompl::multilevel::Projection_FiberedSubspace::project(const ompl::base::Sta
   getBase()->copyState(xBase, cstate->operator[](subspace_index_));
 }
 
+// A singular space is a space for one single robot. It is defined here as either a non-compound space or a compound space
+// with a space type which is not unknown (e.g. SE2, REAL_VECTOR, etc.)
+bool IsSpaceSingular(const ompl::base::StateSpacePtr& space) {
+  if(space->isCompound() && space->getType() == ompl::base::StateSpaceType::STATE_SPACE_UNKNOWN) {
+    return false;
+  }
+  return true;
+}
+
 void ompl::multilevel::Projection_FiberedSubspace::lift(const ompl::base::State *xBase, const ompl::base::State *xFiber,
                               ompl::base::State *xBundle) const 
 {
@@ -48,11 +58,12 @@ void ompl::multilevel::Projection_FiberedSubspace::lift(const ompl::base::State 
   auto compound_space = getBundle()->as<ompl::base::CompoundStateSpace>();
   auto bundle_state = xBundle->as<base::CompoundState>();
 
-  if(!getFiber()->isCompound()) {
+  if(IsSpaceSingular(getFiber())) {
     auto bundle_index = subspace_bundle_to_subspace_fiber_index_.begin()->first;
     getFiber()->copyState(bundle_state->operator[](bundle_index), xFiber);
     return;
   }
+
   auto fiber_state = xFiber->as<base::CompoundState>();
   for(const auto& subspace_indices : subspace_bundle_to_subspace_fiber_index_) {
     auto bundle_index = subspace_indices.first;
@@ -91,7 +102,7 @@ void ompl::multilevel::Projection_FiberedSubspace::inclusionMap(const ompl::base
 void ompl::multilevel::Projection_FiberedSubspace::projectFiber(const ompl::base::State *xBundle, ompl::base::State *xFiber) const 
 {
   const auto bundle_state = xBundle->as<base::CompoundState>();
-  if(!getFiber()->isCompound()) { 
+  if(IsSpaceSingular(getFiber())) {
     auto bundle_index = subspace_bundle_to_subspace_fiber_index_.begin()->first;
     getFiber()->copyState(xFiber, bundle_state->operator[](bundle_index));
     return;

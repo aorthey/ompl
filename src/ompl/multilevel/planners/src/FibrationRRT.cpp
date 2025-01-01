@@ -296,7 +296,6 @@ void FibrationRRT::grow_(const FactoredSpaceInformationPtr& factor) {
   auto& planner = active_planners_[factor->getName()];
   ompl::base::IterationTerminationCondition itc(kNumberOfIterationsPerPlannerCall);
   auto planner_status = planner->solve(itc);
-  //OMPL_ERROR("Factor %s has status %s", factor->getName().c_str(), planner_status.asString().c_str());
 
   auto name = factor->getName();
   if(planner_status_per_factor_.count(name)){
@@ -304,8 +303,6 @@ void FibrationRRT::grow_(const FactoredSpaceInformationPtr& factor) {
   } else {
     planner_status_per_factor_.insert({name, planner_status});
   }
-  //planner_status_per_factor_.insert({factor->getName(), planner_status});
-  //OMPL_ERROR("Factor %s has status %s", factor->getName().c_str(), planner_status_per_factor_[factor->getName()].asString().c_str());
 }
 
 std::vector<FactoredPlannerPtr> FibrationRRT::getChildrenPlanner_(const FactoredSpaceInformationPtr& factor) const {
@@ -691,8 +688,5 @@ void FibrationRRT::smoothSolutionPath(const FactoredSpaceInformationPtr& factor)
   simplifier->simplifyMax(*path_geometric);
   const size_t Nstates_after = path_geometric->getStateCount();
   OMPL_DEBUG("Improved solution path from %d states to %d states.", Nstates_before, Nstates_after);
-  // for(const auto& state : path_geometric->getStates()) {
-  //   factor->printState(state);
-  // }
   pdef->addSolutionPath(path, false, 0.0, getName());
 }

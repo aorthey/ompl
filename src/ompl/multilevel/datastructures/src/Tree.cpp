@@ -9,9 +9,9 @@ Tree::Tree(const base::SpaceInformationPtr &si)
   : si_(si) {
     if (!nn_) {
         if(si->getStateSpace()->isMetricSpace()) {
-          nn_ = std::make_shared<NearestNeighborsGNATNoThreadSafety<TreeNode*>>();
+            nn_ = std::make_shared<NearestNeighborsGNATNoThreadSafety<TreeNode*>>();
         } else { 
-          nn_ = std::make_shared<NearestNeighborsSqrtApprox<TreeNode*>>();
+            nn_ = std::make_shared<NearestNeighborsSqrtApprox<TreeNode*>>();
         }
     }
     nn_->setDistanceFunction([this](const TreeNode *a, const TreeNode *b) { return distance(si_, a, b); });
@@ -44,10 +44,10 @@ size_t Tree::size() const {
 }
 
 std::vector<TreeNode*> Tree::getNodes() const {
-    //return nodes_;
     std::vector<TreeNode*> nodes;
-    if (nn_)
+    if (nn_) {
         nn_->list(nodes);
+    }
     return nodes;
 }
 
