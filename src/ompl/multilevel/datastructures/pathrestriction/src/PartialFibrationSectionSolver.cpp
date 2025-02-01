@@ -125,7 +125,6 @@ std::optional<PathSectionPtr> partialFibrationSectionSolver(const ompl::multilev
       }
 
       if(restriction->size() <= node.next_base_path_index + 1) {
-        OMPL_WARN("Reached index %d/%d", node.next_base_path_index, restriction->size());
         continue;
       }
 
@@ -133,7 +132,6 @@ std::optional<PathSectionPtr> partialFibrationSectionSolver(const ompl::multilev
       new_node.node = lastNode;
       new_node.next_base_path_index = node.next_base_path_index + 1;
       new_node.distance_to_waypoint = distance_to_target;
-      OMPL_WARN("create new node at waypoint %d (distance %f)", new_node.next_base_path_index, new_node.distance_to_waypoint);
 
       open_nodes.push(new_node);
     }

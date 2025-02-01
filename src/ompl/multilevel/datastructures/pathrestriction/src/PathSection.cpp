@@ -61,7 +61,7 @@ PathSection::PathSection(const std::vector<ompl::base::State*>& states) : sectio
 
 PathSection::PathSection(const PathRestrictionPtr& restriction) : restriction_(restriction)
 {
-    FiberedProjectionPtr projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
+    auto projection = restriction_->getProjection();
     if (projection->getBaseDimension() > 0)
     {
         auto base = projection->getBase();
@@ -76,7 +76,7 @@ PathSection::~PathSection()
     if(restriction_ == nullptr) {
         return;
     }
-    auto projection = std::static_pointer_cast<FiberedProjection>(restriction_->getProjection());
+    auto projection = restriction_->getProjection();
     auto bundle = projection->getBundle();
 
     if (projection->getBaseDimension() > 0)

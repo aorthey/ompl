@@ -91,6 +91,8 @@ namespace ompl
              * current factor */
             size_t getTotalNumParents() const;
 
+            size_t getTotalNumChildren() const;
+
             const std::vector<FactoredSpaceInformationPtr>& getChildren() const;
             const FactoredSpaceInformationPtr& getChild(const std::string& name) const;
             bool hasChildren() const;

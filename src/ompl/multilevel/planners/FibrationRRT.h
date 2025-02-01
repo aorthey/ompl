@@ -22,8 +22,9 @@ namespace ompl
         OMPL_CLASS_FORWARD(FactoredPlanner);
 
         const size_t kNumberOfIterationsPerPlannerCall = 1;
-        //const size_t kNumberOfIterationsPerPlannerCall = 3;
         const float kGlobalGoalTreshold = 0.1;
+
+        const double kGoalBiasDefault = 0.05;
 
         class FibrationRRT : public base::Planner 
         {
@@ -56,24 +57,34 @@ namespace ompl
 
             size_t numFactors() const;
 
-            //Parameters 
-            void setSelectorFunctionType(const SelectorFunctionType& selector_function_type);
-            void setRange(double range);
-            void setGoalBias(double goal_bias);
-            void setSmoothIntermediateSolutions(bool smooth_intermediate_solutions = true);
-
-            void setSmoothIntermediateSolutions(const std::string& name, bool smooth_intermediate_solutions = true);
-            void setRange(const std::string& name, double range);
-            void setGoalBias(const std::string& name, double goal_bias);
-            void setPathRestrictionSamplingBias(const std::string& name, double path_restriction_sampling_bias);
-            void setPathRestrictionSurroundingSamplingBias(const std::string& name, double path_restriction_surrounding_sampling_bias);
-            void setSamplingPerturbationBias(const std::string& name, double sampling_perturbation_bias);
-
+            //Global and Local Parameters 
             double getRange() const;
+            void setRange(double range);
+            void setLocalRange(const std::string& name, double range);
+
             double getGoalBias() const;
+            void setGoalBias(double goal_bias);
+            void setLocalGoalBias(const std::string& name, double goal_bias);
+
             double getPathRestrictionSamplingBias() const;
+            void setPathRestrictionSamplingBias(double value);
+            void setLocalPathRestrictionSamplingBias(const std::string& name, double path_restriction_sampling_bias);
+
             double getPathRestrictionSurroundingSamplingBias() const;
+            void setPathRestrictionSurroundingSamplingBias(double value);
+            void setLocalPathRestrictionSurroundingSamplingBias(const std::string& name, double path_restriction_surrounding_sampling_bias);
+
             double getSamplingPerturbationBias() const;
+            void setSamplingPerturbationBias(double value);
+            void setLocalSamplingPerturbationBias(const std::string& name, double sampling_perturbation_bias);
+
+            void setSmoothIntermediateSolutions(bool smooth_intermediate_solutions = true);
+            void setLocalSmoothIntermediateSolutions(const std::string& name, bool smooth_intermediate_solutions = true);
+
+            void setSelectorFunctionType(const SelectorFunctionType& selector_function_type);
+            void setDisableSectionSearch();
+            void setEnableSectionSearch();
+
 
           protected:
             bool shouldSmoothSolutionPath(const FactoredSpaceInformationPtr& factor);
@@ -92,6 +103,7 @@ namespace ompl
             bool isActive_(const FactoredSpaceInformationPtr& factor) const;
             bool isSolved_(const FactoredSpaceInformationPtr& factor) const;
             bool allChildrenHaveSolutions_(const FactoredSpaceInformationPtr& factor) const;
+            bool hasNonSolvedSiblings_(const FactoredSpaceInformationPtr& factor) const;
             bool hasValidProblemDefinition_(const FactoredSpaceInformationPtr& factor) const;
 
             void createProblemDefinition_(const FactoredSpaceInformationPtr& factor, const base::State* parent_start, const base::GoalPtr& parent_goal);
@@ -105,11 +117,14 @@ namespace ompl
             std::optional<size_t> seed_;
 
             std::vector<FactoredSpaceInformationPtr> active_factors_;
+
             std::unordered_map<std::string, FactoredPlannerPtr> active_planners_;
             std::unordered_map<std::string, bool> is_active_;
             std::unordered_map<std::string, bool> is_solved_;
             std::unordered_map<std::string, base::ProblemDefinitionPtr> problem_definitions_per_factor_;
             std::unordered_map<std::string, base::PlannerStatus> planner_status_per_factor_;
+
+            bool use_section_search_{true};
 
             //Parameters per planner
             std::unordered_map<std::string, double> range_;

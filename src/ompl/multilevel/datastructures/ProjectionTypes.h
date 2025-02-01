@@ -45,16 +45,16 @@ namespace ompl
     {
         enum ProjectionType
         {
-            /** \brief ompl::multilevel::Projection_None */
+            /** \brief ompl::multilevel::NoneProjection */
             PROJECTION_NONE = 0,
 
-            /** \brief ompl::multilevel::Projection_EmptySet */
+            /** \brief ompl::multilevel::EmptySetProjection */
             PROJECTION_EMPTY_SET = 1,
 
-            /** \brief ompl::multilevel::Projection_Identity */
+            /** \brief ompl::multilevel::IdentityProjection */
             PROJECTION_IDENTITY = 2,
 
-            /** \brief ompl::multilevel::Projection_Relaxation */
+            /** \brief ompl::multilevel::RelaxationProjection */
             PROJECTION_CONSTRAINED_RELAXATION = 3,
 
             /** \brief RN \rightarrow RM, m < n */
@@ -112,6 +112,12 @@ namespace ompl
             /** \brief X1 \times \vdots \times XN \rightarrow Xi 
              * (A mapping from a set of compound spaces to a single subspace) */
             PROJECTION_SUBSPACE = 21,
+
+            /** \brief R3 \times R2 \times SO2 \rightarrow R3 */
+            PROJECTION_R3R2SO2_R3 = 22,
+
+            /** \brief R3 \times SO2 \rightarrow R3 */
+            PROJECTION_R3SO2_R3 = 23,
 
             /** \brief Compound projection */
             PROJECTION_COMPOUND = -2,

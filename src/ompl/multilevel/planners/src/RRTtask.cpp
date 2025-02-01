@@ -225,6 +225,9 @@ ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTe
 
         if(use_task_space_) {
 
+          if(kDebug) {
+            OMPL_DEBUG("Propagate motion");
+          }
           auto motion_validator = std::static_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator());
           auto states = motion_validator->propagateMotion(nearest_node->getState(), new_state);
           if(states.size() <= 1) {
@@ -248,6 +251,7 @@ ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTe
           if(kDebug) {
             OMPL_DEBUG("New state:");
             si_->printState(new_state);
+            OMPL_DEBUG("Check motion");
           }
           if (si_->checkMotion(nearest_node->getState(), new_state))
           {
@@ -258,6 +262,9 @@ ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTe
               }
               nearest_node = tree_->addNodeAndParent(new_state, nearest_node);
           } else {
+            if(kDebug) {
+              OMPL_DEBUG("Invalid");
+            }
             continue;
           }
         }

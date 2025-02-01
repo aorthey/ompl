@@ -108,6 +108,7 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
 ////////////////////////////////////////////////////////////////////////////////
 // Parallel fibration
 ////////////////////////////////////////////////////////////////////////////////
+  OMPL_INFORM("SectionSearch: Parallel Fibration");
   std::unordered_map<std::string, PathRestrictionPtr> path_restrictions;
 
   for(const auto& child_planner : children_planner_) {
@@ -150,21 +151,23 @@ ompl::base::PlannerStatus FactoredPlanner::solve(const ompl::base::PlannerTermin
         return base::PlannerStatus::INVALID_START;
     }
 
-    auto maybe_section = solveSection();
-    if(maybe_section.has_value()) {
-        base::Goal *goal = pdef_->getGoal().get();
-        if(goal->isSatisfied(maybe_section.value()->back())) {
-          auto nodes = tree_->getNodes();
-          for(const auto& node : nodes) {
-            if(goal->isSatisfied(node->getState())) {
-              makeSolutionPath(node, false, 0.0);
-              OMPL_DEBUG("Found exact section.");
-              return ompl::base::PlannerStatus(ompl::base::PlannerStatus::EXACT_SOLUTION);
-            }
+    if(use_section_search_) {
+      auto maybe_section = solveSection();
+      if(maybe_section.has_value()) {
+          base::Goal *goal = pdef_->getGoal().get();
+          if(goal->isSatisfied(maybe_section.value()->back())) {
+              auto nodes = tree_->getNodes();
+              for(const auto& node : nodes) {
+                  if(goal->isSatisfied(node->getState())) {
+                      makeSolutionPath(node, false, 0.0);
+                      OMPL_INFORM("Found section path solution.");
+                      return ompl::base::PlannerStatus(ompl::base::PlannerStatus::EXACT_SOLUTION);
+                  }
+              }
+          } else {
+            OMPL_WARN("Found section, but last state is not in goal");
           }
-        } else {
-          OMPL_WARN("Found section, but last state is not in goal");
-        }
+      }
     }
   }
   return BaseTypePlanner::solve(ptc);
@@ -195,6 +198,13 @@ void FactoredPlanner::setSamplingPerturbationBias(double sampling_perturbation_b
 
 double FactoredPlanner::getSamplingPerturbationBias() const {
   return sampling_perturbation_bias_;
+}
+
+void FactoredPlanner::setEnableSectionSearch() {
+  use_section_search_ = true;
+}
+void FactoredPlanner::setDisableSectionSearch() {
+  use_section_search_ = false;
 }
 
 void FactoredPlanner::setSeed(size_t seed) 

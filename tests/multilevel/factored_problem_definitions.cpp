@@ -28,9 +28,9 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_CorrectProjectionToProblemDefiniti
     space_D->setName("SpaceD");
     auto D = std::make_shared<FactoredSpaceInformation>(space_D);
 
-    auto projAB = std::make_shared<Projection_RN_RM>(space_A, space_B, std::vector<size_t>({0,1,4,5}));
-    auto projBD = std::make_shared<Projection_RN_RM>(space_B, space_D, std::vector<size_t>({0,3}));
-    auto projAC = std::make_shared<Projection_RN_RM>(space_A, space_C, std::vector<size_t>({2,3}));
+    auto projAB = std::make_shared<RNToRMProjection>(space_A, space_B, std::vector<size_t>({0,1,4,5}));
+    auto projBD = std::make_shared<RNToRMProjection>(space_B, space_D, std::vector<size_t>({0,3}));
+    auto projAC = std::make_shared<RNToRMProjection>(space_A, space_C, std::vector<size_t>({2,3}));
 
     A->addChild(B, projAB);
     A->addChild(C, projAC);

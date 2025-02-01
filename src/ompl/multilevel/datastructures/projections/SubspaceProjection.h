@@ -21,13 +21,13 @@ namespace ompl
     namespace multilevel
     {
         /* \brief A bundle projection without an explicit fiber space representation */
-        class Projection_Subspace : public InclusionProjection
+        class SubspaceProjection : public InclusionProjection
         {
         public:
-            Projection_Subspace(const base::SpaceInformationPtr& siBundle, const base::SpaceInformationPtr& siBase, unsigned int subspace_index);
-            Projection_Subspace(base::StateSpacePtr bundleSpace, base::StateSpacePtr baseSpace, unsigned int subspace_index);
+            SubspaceProjection(const base::SpaceInformationPtr& siBundle, const base::SpaceInformationPtr& siBase, unsigned int subspace_index);
+            SubspaceProjection(base::StateSpacePtr bundleSpace, base::StateSpacePtr baseSpace, unsigned int subspace_index);
 
-            virtual ~Projection_Subspace() = default;
+            virtual ~SubspaceProjection() = default;
 
             void project(const ompl::base::State *xBundle, ompl::base::State *xBase) const override;
             void lift(const ompl::base::State *xBase, ompl::base::State *xBundle) const override;

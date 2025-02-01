@@ -1,8 +1,13 @@
 #define BOOST_TEST_MODULE "FactoredMotionPlanningLifts"
 #include <boost/test/unit_test.hpp>
+#include <vector>
 
 #include "factorization_common.h"
-#include <ompl/multilevel/datastructures/projections/SubspaceFiberedProjection.h>
+#include <ompl/multilevel/datastructures/projections/FiberedSubspaceProjection.h>
+#include <ompl/multilevel/datastructures/projections/R3R2SO2ToR3Projection.h>
+#include <ompl/multilevel/datastructures/projections/XR3R2SO2ToXR3Projection.h>
+#include <ompl/base/spaces/RealVectorStateSpace.h>
+#include <ompl/base/spaces/SO2StateSpace.h>
 
 #include <ompl/util/Console.h>
 
@@ -23,9 +28,9 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_InclusionMaps)
     const auto indicesB = std::vector<size_t>({0,1});
     const auto indicesC = std::vector<size_t>({2,3});
 
-    auto projAB = std::make_shared<Projection_RN_RM>(space_A, space_B, indicesB);
+    auto projAB = std::make_shared<RNToRMProjection>(space_A, space_B, indicesB);
     BOOST_CHECK(A->addChild(B, projAB));
-    auto projAC = std::make_shared<Projection_RN_RM>(space_A, space_C, indicesC);
+    auto projAC = std::make_shared<RNToRMProjection>(space_A, space_C, indicesC);
     BOOST_CHECK(A->addChild(C, projAC));
 
     ////Create states to lift
@@ -76,9 +81,9 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_InclusionMapsShifted)
     const auto indicesB = std::vector<size_t>({0,3});
     const auto indicesC = std::vector<size_t>({1,2});
 
-    auto projAB = std::make_shared<Projection_RN_RM>(space_A, space_B, indicesB);
+    auto projAB = std::make_shared<RNToRMProjection>(space_A, space_B, indicesB);
     BOOST_CHECK(A->addChild(B, projAB));
-    auto projAC = std::make_shared<Projection_RN_RM>(space_A, space_C, indicesC);
+    auto projAC = std::make_shared<RNToRMProjection>(space_A, space_C, indicesC);
     BOOST_CHECK(A->addChild(C, projAC));
 
     ////Create states to lift
@@ -134,11 +139,11 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_InclusionMapsMultiConnected)
     const auto indicesC = std::vector<size_t>({1,8});
     const auto indicesD = std::vector<size_t>({2,4,5,6,7});
 
-    auto projAB = std::make_shared<Projection_RN_RM>(space_A, space_B, indicesB);
+    auto projAB = std::make_shared<RNToRMProjection>(space_A, space_B, indicesB);
     BOOST_CHECK(A->addChild(B, projAB));
-    auto projAC = std::make_shared<Projection_RN_RM>(space_A, space_C, indicesC);
+    auto projAC = std::make_shared<RNToRMProjection>(space_A, space_C, indicesC);
     BOOST_CHECK(A->addChild(C, projAC));
-    auto projAD = std::make_shared<Projection_RN_RM>(space_A, space_D, indicesD);
+    auto projAD = std::make_shared<RNToRMProjection>(space_A, space_D, indicesD);
     BOOST_CHECK(A->addChild(D, projAD));
 
     ////Create states to lift
@@ -207,11 +212,11 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_LeafNodeLift)
     const auto indicesC = std::vector<size_t>({1,8});
     const auto indicesD = std::vector<size_t>({2,4,5,6,7});
 
-    auto projAB = std::make_shared<Projection_RN_RM>(space_A, space_B, indicesB);
+    auto projAB = std::make_shared<RNToRMProjection>(space_A, space_B, indicesB);
     BOOST_CHECK(A->addChild(B, projAB));
-    auto projAC = std::make_shared<Projection_RN_RM>(space_A, space_C, indicesC);
+    auto projAC = std::make_shared<RNToRMProjection>(space_A, space_C, indicesC);
     BOOST_CHECK(A->addChild(C, projAC));
-    auto projAD = std::make_shared<Projection_RN_RM>(space_A, space_D, indicesD);
+    auto projAD = std::make_shared<RNToRMProjection>(space_A, space_D, indicesD);
     BOOST_CHECK(A->addChild(D, projAD));
 
     ////Create states to lift
@@ -291,17 +296,17 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ComplexLeafNodeLift)
     const auto indicesAC = std::vector<size_t>({0,1,2,3,4});
     const auto indicesCE = std::vector<size_t>({1,3});
     const auto indicesCF = std::vector<size_t>({0,2,4});
-    auto projAB = std::make_shared<Projection_RN_RM>(A, B, indicesAB);
+    auto projAB = std::make_shared<RNToRMProjection>(A, B, indicesAB);
     BOOST_CHECK(A->addChild(B, projAB));
-    auto projAC = std::make_shared<Projection_RN_RM>(A, C, indicesAC);
+    auto projAC = std::make_shared<RNToRMProjection>(A, C, indicesAC);
     BOOST_CHECK(A->addChild(C, projAC));
-    auto projBD = std::make_shared<Projection_RN_RM>(B, D);
+    auto projBD = std::make_shared<RNToRMProjection>(B, D);
     BOOST_CHECK(B->addChild(D, projBD));
-    auto projCE = std::make_shared<Projection_RN_RM>(C, E, indicesCE);
+    auto projCE = std::make_shared<RNToRMProjection>(C, E, indicesCE);
     BOOST_CHECK(C->addChild(E, projCE));
-    auto projCF = std::make_shared<Projection_RN_RM>(C, F, indicesCF);
+    auto projCF = std::make_shared<RNToRMProjection>(C, F, indicesCF);
     BOOST_CHECK(C->addChild(F, projCF));
-    auto projDG = std::make_shared<Projection_RN_RM>(D, G);
+    auto projDG = std::make_shared<RNToRMProjection>(D, G);
     BOOST_CHECK(D->addChild(G, projDG));
 
     ////Create states to lift
@@ -348,13 +353,13 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_ParallelLeafNodeLift)
 
     const auto indicesAB = std::vector<size_t>({0,1,2,3});
     const auto indicesAC = std::vector<size_t>({4,5,6,7});
-    auto projAB = std::make_shared<Projection_RN_RM>(A, B, indicesAB);
+    auto projAB = std::make_shared<RNToRMProjection>(A, B, indicesAB);
     BOOST_CHECK(A->addChild(B, projAB));
-    auto projAC = std::make_shared<Projection_RN_RM>(A, C, indicesAC);
+    auto projAC = std::make_shared<RNToRMProjection>(A, C, indicesAC);
     BOOST_CHECK(A->addChild(C, projAC));
-    auto projBD = std::make_shared<Projection_RN_RM>(B, D);
+    auto projBD = std::make_shared<RNToRMProjection>(B, D);
     BOOST_CHECK(B->addChild(D, projBD));
-    auto projCE = std::make_shared<Projection_RN_RM>(C, E);
+    auto projCE = std::make_shared<RNToRMProjection>(C, E);
     BOOST_CHECK(C->addChild(E, projCE));
 
     ////Create states to lift
@@ -408,14 +413,14 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_SubspaceProjection)
     //Cannot create a projecton when space is not a subspace
     auto NonExistentSpace = CreateCubeStateSpace(2);
     NonExistentSpace->setName("NonExistentSpace");
-    BOOST_CHECK_THROW(std::make_shared<Projection_FiberedSubspace>(Aspace, NonExistentSpace), std::exception);
+    BOOST_CHECK_THROW(std::make_shared<FiberedSubspaceProjection>(Aspace, NonExistentSpace), std::exception);
 
     //Cannot add child when projection points to a different subspace
-    auto projAY = std::make_shared<Projection_FiberedSubspace>(Aspace, Y);
+    auto projAY = std::make_shared<FiberedSubspaceProjection>(Aspace, Y);
     BOOST_CHECK(!A->addChild(B, projAY));
 
     // Correct projection
-    auto projAB = std::make_shared<Projection_FiberedSubspace>(A, B);
+    auto projAB = std::make_shared<FiberedSubspaceProjection>(A, B);
     BOOST_CHECK(A->addChild(B, projAB));
     A->printFactorization(std::cout);
 
@@ -457,4 +462,110 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_SubspaceProjection)
     A->freeState(stateAprime);
     B->freeState(stateB);
     F->freeState(stateF);
+}
+
+BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_R3R2SO2_to_R3_ProjectionTest) 
+{
+    auto R3 = std::make_shared<ompl::base::RealVectorStateSpace>(3);
+    auto R2 = std::make_shared<ompl::base::RealVectorStateSpace>(2);
+    auto SO2 = std::make_shared<ompl::base::SO2StateSpace>();
+
+    auto bundle = R3 + R2 + SO2;
+    auto base = std::make_shared<ompl::base::RealVectorStateSpace>(3);
+
+    auto A = std::make_shared<FactoredSpaceInformation>(bundle);
+    auto B = std::make_shared<FactoredSpaceInformation>(base);
+
+    auto projAB = std::make_shared<R3R2SO2ToR3Projection>(bundle, base);
+
+    A->addChild(B, projAB);
+
+    auto stateA = A->allocState();
+    stateA->as<ompl::base::CompoundState>()->as<ompl::base::RealVectorStateSpace::StateType>(0)->values[0] = 0.0;
+    stateA->as<ompl::base::CompoundState>()->as<ompl::base::RealVectorStateSpace::StateType>(0)->values[1] = 1.0;
+    stateA->as<ompl::base::CompoundState>()->as<ompl::base::RealVectorStateSpace::StateType>(0)->values[2] = 2.0;
+    stateA->as<ompl::base::CompoundState>()->as<ompl::base::RealVectorStateSpace::StateType>(1)->values[0] = 3.0;
+    stateA->as<ompl::base::CompoundState>()->as<ompl::base::RealVectorStateSpace::StateType>(1)->values[1] = 4.0;
+    stateA->as<ompl::base::CompoundState>()->as<ompl::base::SO2StateSpace::StateType>(2)->value = 5.0;
+    A->printState(stateA);
+
+    auto stateAprime = A->allocState();
+    auto stateB = B->allocState();
+    auto stateF = projAB->getFiber()->allocState();
+
+    projAB->project(stateA, stateB);
+    projAB->projectFiber(stateA, stateF);
+    projAB->lift(stateB, stateF, stateAprime);
+
+    A->printState(stateAprime);
+
+    BOOST_CHECK_CLOSE(A->getStateSpace()->distance(stateA, stateAprime), 0.0, 1e-5);
+}
+
+BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_XR3R2SO2_to_XR3_ProjectionTest) 
+{
+    using ompl::base::CompoundState;
+    using RealVectorState = ompl::base::RealVectorStateSpace::StateType;
+    using SO2State = ompl::base::SO2StateSpace::StateType;
+
+    auto R3_1 = std::make_shared<ompl::base::RealVectorStateSpace>(3);
+    auto R2_1 = std::make_shared<ompl::base::RealVectorStateSpace>(2);
+    auto SO2_1 = std::make_shared<ompl::base::SO2StateSpace>();
+
+    auto R3_2 = std::make_shared<ompl::base::RealVectorStateSpace>(3);
+    auto R2_2 = std::make_shared<ompl::base::RealVectorStateSpace>(2);
+    auto SO2_2 = std::make_shared<ompl::base::SO2StateSpace>();
+
+    auto bundle1 = R3_1 + R2_1 + SO2_1;
+    auto bundle2 = R3_2 + R2_2 + SO2_2;
+
+    auto bundle =std::make_shared<ompl::base::CompoundStateSpace>(std::vector<ompl::base::StateSpacePtr>({bundle1, bundle2}), std::vector<double>({1.0, 1.0}));
+    bundle->printSettings(std::cout);
+    auto base =std::make_shared<ompl::base::CompoundStateSpace>(std::vector<ompl::base::StateSpacePtr>({bundle1, R3_1}), std::vector<double>({1.0, 1.0}));
+
+    auto A = std::make_shared<FactoredSpaceInformation>(bundle);
+    A->printSettings(std::cout);
+
+    auto B = std::make_shared<FactoredSpaceInformation>(base);
+
+    auto projAB = std::make_shared<XR3R2SO2ToXR3Projection>(bundle, base);
+
+    A->addChild(B, projAB);
+    A->printFactorization(std::cout);
+
+    const auto stateA = A->allocState();
+    stateA->as<CompoundState>()->as<CompoundState>(0)->as<RealVectorState>(0)->values[0] = 0.0;
+    stateA->as<CompoundState>()->as<CompoundState>(0)->as<RealVectorState>(0)->values[1] = 1.0;
+    stateA->as<CompoundState>()->as<CompoundState>(0)->as<RealVectorState>(0)->values[2] = 2.0;
+    stateA->as<CompoundState>()->as<CompoundState>(0)->as<RealVectorState>(1)->values[0] = 3.0;
+    stateA->as<CompoundState>()->as<CompoundState>(0)->as<RealVectorState>(1)->values[1] = 4.0;
+    stateA->as<CompoundState>()->as<CompoundState>(0)->as<SO2State>(2)->value = 5.0;
+    stateA->as<CompoundState>()->as<CompoundState>(1)->as<RealVectorState>(0)->values[0] = 6.0;
+    stateA->as<CompoundState>()->as<CompoundState>(1)->as<RealVectorState>(0)->values[1] = 7.0;
+    stateA->as<CompoundState>()->as<CompoundState>(1)->as<RealVectorState>(0)->values[2] = 8.0;
+    stateA->as<CompoundState>()->as<CompoundState>(1)->as<RealVectorState>(1)->values[0] = 9.0;
+    stateA->as<CompoundState>()->as<CompoundState>(1)->as<RealVectorState>(1)->values[1] = 10.0;
+    stateA->as<CompoundState>()->as<CompoundState>(1)->as<SO2State>(2)->value = 11.0;
+    A->printState(stateA);
+
+    auto stateAprime = A->allocState();
+    auto stateB = B->allocState();
+
+    projAB->project(stateA, stateB);
+
+    B->printState(stateB);
+
+    auto stateF = projAB->getFiber()->allocState();
+    projAB->projectFiber(stateA, stateF);
+    projAB->lift(stateB, stateF, stateAprime);
+
+    A->printState(stateAprime);
+    A->printState(stateA);
+
+    BOOST_CHECK_CLOSE(A->getStateSpace()->distance(stateA, stateAprime), 0.0, 1e-5);
+
+    A->freeState(stateA);
+    A->freeState(stateAprime);
+    B->freeState(stateB);
+    projAB->getFiber()->freeState(stateF);
 }

@@ -321,6 +321,10 @@ void FactoredSpaceInformation::freeChildStates(std::unordered_map<std::string, o
   childStates.clear();
 }
 
+size_t FactoredSpaceInformation::getTotalNumChildren() const {
+  return children_.size();
+}
+
 size_t FactoredSpaceInformation::getTotalNumParents() const {
   size_t count = 0;
 

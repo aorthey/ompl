@@ -3,11 +3,11 @@
 #include <ompl/multilevel/datastructures/projections/SubspaceProjection.h>
 #include <ompl/base/SpaceInformation.h>
 
-ompl::multilevel::Projection_Subspace::Projection_Subspace(
+ompl::multilevel::SubspaceProjection::SubspaceProjection(
     const base::SpaceInformationPtr& siBundle, const base::SpaceInformationPtr& siBase, unsigned int subspace_index)
-  : Projection_Subspace(siBundle->getStateSpace(), siBase->getStateSpace(), subspace_index) {} 
+  : SubspaceProjection(siBundle->getStateSpace(), siBase->getStateSpace(), subspace_index) {} 
 
-ompl::multilevel::Projection_Subspace::Projection_Subspace(ompl::base::StateSpacePtr bundleSpace, 
+ompl::multilevel::SubspaceProjection::SubspaceProjection(ompl::base::StateSpacePtr bundleSpace, 
     ompl::base::StateSpacePtr baseSpace, unsigned int subspace_index)
   : InclusionProjection(bundleSpace, baseSpace)
 {
@@ -36,18 +36,18 @@ ompl::multilevel::Projection_Subspace::Projection_Subspace(ompl::base::StateSpac
   setType(PROJECTION_SUBSPACE);
 }
 
-void ompl::multilevel::Projection_Subspace::project(const ompl::base::State *xBundle, ompl::base::State *xBase) const 
+void ompl::multilevel::SubspaceProjection::project(const ompl::base::State *xBundle, ompl::base::State *xBase) const 
 {
   auto cstate = xBundle->as<base::CompoundState>();
   getBase()->copyState(xBase, cstate->operator[](subspace_index_));
 }
 
-void ompl::multilevel::Projection_Subspace::lift(const ompl::base::State *xBase, ompl::base::State *xBundle) const
+void ompl::multilevel::SubspaceProjection::lift(const ompl::base::State *xBase, ompl::base::State *xBundle) const
 {
   inclusionMap(xBase, xBundle);
 }
 
-void ompl::multilevel::Projection_Subspace::inclusionMap(const ompl::base::State *xBase, ompl::base::State *xBundle) const 
+void ompl::multilevel::SubspaceProjection::inclusionMap(const ompl::base::State *xBase, ompl::base::State *xBundle) const 
 {
   auto cstate = xBundle->as<base::CompoundState>();
   immersion_space_->copyState(cstate->operator[](subspace_index_), xBase);

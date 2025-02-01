@@ -9,7 +9,7 @@
 #include <ompl/util/RandomNumbers.h>
 #include <ompl/multilevel/planners/FibrationRRT.h>
 #include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
-#include <ompl/multilevel/datastructures/projections/RN_RM.h>
+#include <ompl/multilevel/datastructures/projections/RNToRMProjection.h>
 
 #include <boost/format.hpp>
 #include <boost/math/constants/constants.hpp>
@@ -116,7 +116,7 @@ FactoredSpaceInformationPtr constructDecompositionFactorTree()
       robot_space->setBounds(kLowerBound, kUpperBound);
       robot_space->setName("SpaceRobot"+std::to_string(k));
       auto robot_factor(std::make_shared<FactoredSpaceInformation>(robot_space));
-      auto projection = std::make_shared<Projection_RN_RM>(factor->getStateSpace(), robot_space, std::vector<size_t>({2*k, 2*k+1}));
+      auto projection = std::make_shared<RNToRMProjection>(factor->getStateSpace(), robot_space, std::vector<size_t>({2*k, 2*k+1}));
 
       BOOST_CHECK(factor->addChild(robot_factor, projection));
     }
@@ -151,7 +151,7 @@ FactoredSpaceInformationPtr constructPrioritizedFactorTree()
         }
       );
 
-      auto projection = std::make_shared<Projection_RN_RM>(current->getStateSpace(), robot_space);
+      auto projection = std::make_shared<RNToRMProjection>(current->getStateSpace(), robot_space);
       BOOST_CHECK(current->addChild(robot_factor, projection));
       current = robot_factor;
     }

@@ -8,7 +8,7 @@
 #include <ompl/base/StateSpace.h>
 #include <ompl/multilevel/planners/FibrationRRT.h>
 #include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
-#include <ompl/multilevel/datastructures/projections/SE2_R2.h>
+#include <ompl/multilevel/datastructures/projections/SE2ToR2Projection.h>
 #include <iostream>
 #include <boost/math/constants/constants.hpp>
 
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_RigidBodyPlanning)
     auto factor_R2(std::make_shared<FactoredSpaceInformation>(R2));
     factor_R2->setStateValidityChecker(isStateValid_R2);
 
-    auto projection = std::make_shared<Projection_SE2_R2>(SE2, R2);
+    auto projection = std::make_shared<SE2ToR2Projection>(SE2, R2);
 
     BOOST_CHECK(factor->addChild(factor_R2, projection));
 

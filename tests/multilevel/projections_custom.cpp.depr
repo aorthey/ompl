@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(Projections_Custom)
     // #########################################################################
     // ## Create fibered projection
     // #########################################################################
-    ompl::multilevel::ProjectionPtr projAB = std::make_shared<Projection_RN_RM>(total_space, base_space);
+    ompl::multilevel::ProjectionPtr projAB = std::make_shared<RNToRMProjection>(total_space, base_space);
 
     // #########################################################################
     // ## Put it all together

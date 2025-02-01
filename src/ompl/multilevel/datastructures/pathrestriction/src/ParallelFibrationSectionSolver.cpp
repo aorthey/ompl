@@ -5,6 +5,7 @@
 #include <ompl/multilevel/datastructures/Tree.h>
 #include <ompl/multilevel/datastructures/pathrestriction/PathRestriction.h>
 #include <ompl/multilevel/datastructures/pathrestriction/PathSection.h>
+#include <ompl/multilevel/datastructures/helpers/BoundedUniquePermutations.h>
 
 namespace ompl {
 namespace multilevel {
@@ -49,7 +50,6 @@ std::vector<ompl::base::State*> makeSectionPathL2(const FactoredSpaceInformation
         state_information.restriction_name = restriction.first;
         state_information.base_path_index = k;
         state_information.position_on_base_path = d;
-        std::cout << "Restriction " << restriction.first << " state at index " << k << " position " << d << std::endl;
         joint_base_path_states.push_back(state_information);
       }
   }
@@ -76,9 +76,6 @@ std::vector<ompl::base::State*> makeSectionPathL2(const FactoredSpaceInformation
   std::vector<ompl::base::State*> states;
 
   for(const auto& state_information : joint_base_path_states) {
-    OMPL_ERROR("State on restriction %s at index %d (position %f).", state_information.restriction_name.c_str(), 
-        state_information.base_path_index, state_information.position_on_base_path);
-
     const auto restriction_name = state_information.restriction_name;
     auto base_state = path_restrictions.at(restriction_name)->getBaseStateAt(state_information.base_path_index);
     auto s = state_information.position_on_base_path;
@@ -103,7 +100,7 @@ std::vector<ompl::base::State*> makeSectionPathL2(const FactoredSpaceInformation
   return states;
 }
 
-std::vector<ompl::base::State*> makeSectionPathL1(const FactoredSpaceInformationPtr& factor, const std::unordered_map<std::string, PathRestrictionPtr>& path_restrictions) {
+std::vector<ompl::base::State*> makeSectionPathL1(const FactoredSpaceInformationPtr& factor, const std::unordered_map<std::string, PathRestrictionPtr>& path_restrictions, const std::vector<std::string>& permutation) {
   auto children = factor->getChildren();
 
   if(children.size() != path_restrictions.size()) {
@@ -125,23 +122,26 @@ std::vector<ompl::base::State*> makeSectionPathL1(const FactoredSpaceInformation
   }
 
   size_t counter = 0;
-  for(const auto& path_restriction : path_restrictions) {
-      const auto& basePath = path_restriction.second->getBasePath();
-      const auto L = path_restriction.second->getLengthBasePath();
+
+  //Iterate over all path restrictions and interpolate a straight path for one
+  //space, while keeping the remaining path restrictions fixed.
+
+  for(const auto& name : permutation) {
+      auto path_restriction = path_restrictions.at(name);
+      const auto& basePath = path_restriction->getBasePath();
+      const auto L = path_restriction->getLengthBasePath();
       const auto N = basePath.size();
-      const auto name = path_restriction.first;
 
       size_t startK = (counter == 0 ? 0 : 1); //skip first state because it is already the end state of the last segment
       counter++;
       for(size_t k = startK; k < N; k++) {
-        auto d = path_restriction.second->getLengthBasePathUntil(k) / L;
+        auto d = path_restriction->getLengthBasePathUntil(k) / L;
         BasePathStateInformation state_information;
         state_information.restriction_name = name;
         state_information.base_path_index = k;
         state_information.position_on_base_path = d;
-        //std::cout << "Restriction " << path_restriction.first << " state at index " << k << " position " << d << std::endl;
 
-        auto base_state = path_restriction.second->getBaseStateAt(state_information.base_path_index);
+        auto base_state = path_restriction->getBaseStateAt(state_information.base_path_index);
 
         for(const auto& other_path_restriction : path_restrictions) {
           const auto other_name = other_path_restriction.first;
@@ -164,6 +164,14 @@ std::vector<ompl::base::State*> makeSectionPathL1(const FactoredSpaceInformation
   return states;
 }
 
+const size_t kMaximumPermutationsOnL1Section = 10;
+size_t ComputeMaximumPermutations(const size_t& k) {
+  if(k < 5) {
+    return std::tgamma(k+1);
+  }
+  return kMaximumPermutationsOnL1Section;
+}
+
 std::optional<PathSectionPtr> parallelFibrationSectionSolver(const ompl::multilevel::FactoredSpaceInformationPtr& factor, 
     const TreePtr& tree, const std::unordered_map<std::string, PathRestrictionPtr>& path_restrictions) {
 
@@ -172,15 +180,26 @@ std::optional<PathSectionPtr> parallelFibrationSectionSolver(const ompl::multile
   }
 
   if(std::dynamic_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(factor->getMotionValidator()) != nullptr) {
-    OMPL_WARN("Cannot compute section using Task Space constraints");
     return std::nullopt;
   }
 
-  auto states = makeSectionPathL1(factor, path_restrictions);
-  if(!checkMotion(factor, tree, tree->getRoot(), states)) {
-    return std::nullopt;
+  auto statesL2 = makeSectionPathL2(factor, path_restrictions);
+  if(checkMotion(factor, tree, tree->getRoot(), statesL2)) {
+    return std::make_shared<PathSection>(statesL2);
   }
-  return std::make_shared<PathSection>(states);
+
+  auto maximum_permutations = ComputeMaximumPermutations(path_restrictions.size());
+
+  size_t counter = 0;
+  for(const auto& permutation : getBoundedUniquePermutations(path_restrictions, maximum_permutations)) {
+    auto statesL1 = makeSectionPathL1(factor, path_restrictions, permutation);
+    if(checkMotion(factor, tree, tree->getRoot(), statesL1)) {
+      OMPL_INFORM("Found section path after evaluating %d permutations.", counter);
+      return std::make_shared<PathSection>(statesL1);
+    }
+    counter++;
+  }
+  return std::nullopt;
 }
 
 }

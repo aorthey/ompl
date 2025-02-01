@@ -38,31 +38,39 @@
 
 #include <ompl/multilevel/datastructures/ProjectionFactory.h>
 
-// XRN -> X
-#include <ompl/multilevel/datastructures/projections/XRN_X_SO2.h>
-#include <ompl/multilevel/datastructures/projections/XRN_X_SO3.h>
-#include <ompl/multilevel/datastructures/projections/XRN_X_SE2.h>
-#include <ompl/multilevel/datastructures/projections/XRN_X_SE3.h>
+#include <ompl/multilevel/datastructures/projections/NoneProjection.h>
+#include <ompl/multilevel/datastructures/projections/EmptySetProjection.h>
+#include <ompl/multilevel/datastructures/projections/IdentityProjection.h>
+#include <ompl/multilevel/datastructures/projections/RelaxationProjection.h>
 
-// XRN -> XRM
-#include <ompl/multilevel/datastructures/projections/XRN_XRM_SO2.h>
-#include <ompl/multilevel/datastructures/projections/XRN_XRM_SO3.h>
-#include <ompl/multilevel/datastructures/projections/XRN_XRM_SE2.h>
-#include <ompl/multilevel/datastructures/projections/XRN_XRM_SE3.h>
+#include <ompl/multilevel/datastructures/projections/FiberedSubspaceProjection.h>
+#include <ompl/multilevel/datastructures/projections/FiberedProjection.h>
 
-#include <ompl/multilevel/datastructures/projections/SE3_R3.h>
-#include <ompl/multilevel/datastructures/projections/SE3RN_R3.h>
-#include <ompl/multilevel/datastructures/projections/SE2_R2.h>
-#include <ompl/multilevel/datastructures/projections/SE2RN_R2.h>
+#include <ompl/multilevel/datastructures/projections/SE2RNToR2Projection.h>
+#include <ompl/multilevel/datastructures/projections/SE3RNToR3Projection.h>
+#include <ompl/multilevel/datastructures/projections/SE3ToR3Projection.h>
+#include <ompl/multilevel/datastructures/projections/SE2ToR2Projection.h>
+#include <ompl/multilevel/datastructures/projections/RNToRMProjection.h>
 
-#include <ompl/multilevel/datastructures/projections/RN_RM.h>
-#include <ompl/multilevel/datastructures/projections/RNSO2_RN.h>
-#include <ompl/multilevel/datastructures/projections/SO2N_SO2M.h>
+#include <ompl/multilevel/datastructures/projections/R3R2SO2ToR3Projection.h>
+#include <ompl/multilevel/datastructures/projections/R3SO2ToR3Projection.h>
+#include <ompl/multilevel/datastructures/projections/XR3R2SO2ToXR3Projection.h>
+#include <ompl/multilevel/datastructures/projections/XR3SO2ToXR3Projection.h>
 
-#include <ompl/multilevel/datastructures/projections/None.h>
-#include <ompl/multilevel/datastructures/projections/EmptySet.h>
-#include <ompl/multilevel/datastructures/projections/Identity.h>
-#include <ompl/multilevel/datastructures/projections/Relaxation.h>
+#include <ompl/multilevel/datastructures/projections/SO2NToSO2MProjection.h>
+#include <ompl/multilevel/datastructures/projections/RNSO2ToRNProjection.h>
+
+#include <ompl/multilevel/datastructures/projections/SO3RNToSO3RMProjection.h>
+#include <ompl/multilevel/datastructures/projections/SO2RNToSO2RMProjection.h>
+#include <ompl/multilevel/datastructures/projections/SE3RNToSE3RMProjection.h>
+#include <ompl/multilevel/datastructures/projections/SE2RNToSE2RMProjection.h>
+
+#include <ompl/multilevel/datastructures/projections/SO3RNToSO3Projection.h>
+#include <ompl/multilevel/datastructures/projections/SO2RNToSO2Projection.h>
+#include <ompl/multilevel/datastructures/projections/SE3RNToSE3Projection.h>
+#include <ompl/multilevel/datastructures/projections/SE2RNToSE2Projection.h>
+
+#include <ompl/multilevel/datastructures/projections/XTimeToXProjection.h>
 
 #include <ompl/util/Exception.h>
 
@@ -170,79 +178,79 @@ ProjectionPtr ProjectionFactory::makeProjection(const StateSpacePtr &Bundle, con
 
     if (type == PROJECTION_NONE)
     {
-        component = std::make_shared<Projection_None>(Bundle, Base);
+        component = std::make_shared<NoneProjection>(Bundle, Base);
     }
     else if (type == PROJECTION_EMPTY_SET)
     {
-        component = std::make_shared<Projection_EmptySet>(Bundle, Base);
+        component = std::make_shared<EmptySetProjection>(Bundle, Base);
     }
     else if (type == PROJECTION_IDENTITY)
     {
-        component = std::make_shared<Projection_Identity>(Bundle, Base);
+        component = std::make_shared<IdentityProjection>(Bundle, Base);
     }
     else if (type == PROJECTION_CONSTRAINED_RELAXATION)
     {
-        component = std::make_shared<Projection_Relaxation>(Bundle, Base);
+        component = std::make_shared<RelaxationProjection>(Bundle, Base);
     }
     else if (type == PROJECTION_RN_RM)
     {
-        component = std::make_shared<Projection_RN_RM>(Bundle, Base);
+        component = std::make_shared<RNToRMProjection>(Bundle, Base);
     }
     else if (type == PROJECTION_RNSO2_RN)
     {
-        component = std::make_shared<Projection_RNSO2_RN>(Bundle, Base);
+        component = std::make_shared<RNSO2ToRNProjection>(Bundle, Base);
     }
     else if (type == PROJECTION_SE2_R2)
     {
-        component = std::make_shared<Projection_SE2_R2>(Bundle, Base);
+        component = std::make_shared<SE2ToR2Projection>(Bundle, Base);
     }
     else if (type == PROJECTION_SE2RN_R2)
     {
-        component = std::make_shared<Projection_SE2RN_R2>(Bundle, Base);
+        component = std::make_shared<SE2RNToR2Projection>(Bundle, Base);
     }
     else if (type == PROJECTION_SE2RN_SE2)
     {
-        component = std::make_shared<Projection_SE2RN_SE2>(Bundle, Base);
+        component = std::make_shared<SE2RNToSE2Projection>(Bundle, Base);
     }
     else if (type == PROJECTION_SE2RN_SE2RM)
     {
-        component = std::make_shared<Projection_SE2RN_SE2RM>(Bundle, Base);
+        component = std::make_shared<SE2RNToSE2RMProjection>(Bundle, Base);
     }
     else if (type == PROJECTION_SO2RN_SO2)
     {
-        component = std::make_shared<Projection_SO2RN_SO2>(Bundle, Base);
+        component = std::make_shared<SO2RNToSO2Projection>(Bundle, Base);
     }
     else if (type == PROJECTION_SO2RN_SO2RM)
     {
-        component = std::make_shared<Projection_SO2RN_SO2RM>(Bundle, Base);
+        component = std::make_shared<SO2RNToSO2RMProjection>(Bundle, Base);
     }
     else if (type == PROJECTION_SO3RN_SO3)
     {
-        component = std::make_shared<Projection_SO3RN_SO3>(Bundle, Base);
+        component = std::make_shared<SO3RNToSO3Projection>(Bundle, Base);
     }
     else if (type == PROJECTION_SO3RN_SO3RM)
     {
-        component = std::make_shared<Projection_SO3RN_SO3RM>(Bundle, Base);
+        component = std::make_shared<SO3RNToSO3RMProjection>(Bundle, Base);
     }
     else if (type == PROJECTION_SE3_R3)
     {
-        component = std::make_shared<Projection_SE3_R3>(Bundle, Base);
+        component = std::make_shared<SE3ToR3Projection>(Bundle, Base);
     }
     else if (type == PROJECTION_SE3RN_R3)
     {
-        component = std::make_shared<Projection_SE3RN_R3>(Bundle, Base);
+        component = std::make_shared<SE3RNToR3Projection>(Bundle, Base);
     }
     else if (type == PROJECTION_SE3RN_SE3)
     {
-        component = std::make_shared<Projection_SE3RN_SE3>(Bundle, Base);
+        component = std::make_shared<SE3RNToSE3Projection>(Bundle, Base);
     }
     else if (type == PROJECTION_SE3RN_SE3RM)
     {
-        component = std::make_shared<Projection_SE3RN_SE3RM>(Bundle, Base);
+        component = std::make_shared<SE3RNToSE3RMProjection>(Bundle, Base);
     }
     else if (type == PROJECTION_SO2N_SO2M)
     {
-        component = std::make_shared<Projection_SO2N_SO2M>(Bundle, Base);
+        component = std::make_shared<SO2NToSO2MProjection>(Bundle, Base);
     }
     else
     {

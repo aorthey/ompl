@@ -8,7 +8,7 @@
 #include <ompl/geometric/planners/rrt/RRT.h>
 #include <ompl/multilevel/planners/FibrationRRT.h>
 #include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
-#include <ompl/multilevel/datastructures/projections/RN_RM.h>
+#include <ompl/multilevel/datastructures/projections/RNToRMProjection.h>
 #include <ompl/util/Console.h>
 
 using namespace ompl::base;

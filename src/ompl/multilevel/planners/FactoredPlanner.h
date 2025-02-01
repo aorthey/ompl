@@ -52,6 +52,9 @@ namespace ompl {
             void setSamplingPerturbationBias(double sampling_perturbation_bias);
             double getSamplingPerturbationBias() const;
 
+            void setDisableSectionSearch();
+            void setEnableSectionSearch();
+
             void setSeed(size_t seed);
           private:
             double path_restriction_sampling_bias_{kDefaultPathRestrictionSamplingBias};
@@ -61,6 +64,8 @@ namespace ompl {
             ompl::base::StateSamplerPtr internal_space_sampler_;
 
             std::vector<FactoredPlannerPtr> children_planner_;
+
+            bool use_section_search_{true};
         };
     }
 }

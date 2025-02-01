@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_SerialConnection)
     ompl::base::StateSpacePtr base_space = CreateCubeStateSpace(4);
     FactoredSpaceInformationPtr base_si = std::make_shared<FactoredSpaceInformation>(base_space);
 
-    ompl::multilevel::ProjectionPtr projAB = std::make_shared<Projection_RN_RM>(total_space, base_space);
+    ompl::multilevel::ProjectionPtr projAB = std::make_shared<RNToRMProjection>(total_space, base_space);
     BOOST_CHECK(si->addChild(base_si, projAB));
 
     ProblemDefinitionPtr pdef = std::make_shared<ProblemDefinition>(si);
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_DuplicateFactors)
     FactoredSpaceInformationPtr B = std::make_shared<FactoredSpaceInformation>(space_B);
 
     A->setup();
-    auto projAB = std::make_shared<Projection_RN_RM>(space_A, space_B);
+    auto projAB = std::make_shared<RNToRMProjection>(space_A, space_B);
 
     BOOST_CHECK(A->addChild(B, projAB));
     BOOST_CHECK(!A->addChild(B, projAB));
@@ -89,22 +89,22 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_InvalidProjections)
     space_C->setName("SpaceC");
     auto C = std::make_shared<FactoredSpaceInformation>(space_C);
 
-    ompl::multilevel::ProjectionPtr projAB = std::make_shared<Projection_RN_RM>(space_A, space_B, std::vector<size_t>({0,1}));
+    ompl::multilevel::ProjectionPtr projAB = std::make_shared<RNToRMProjection>(space_A, space_B, std::vector<size_t>({0,1}));
     BOOST_CHECK(A->addChild(B, projAB));
 
-    ompl::multilevel::ProjectionPtr projAC_overlap = std::make_shared<Projection_RN_RM>(space_A, space_C, std::vector<size_t>({1,2}));
+    ompl::multilevel::ProjectionPtr projAC_overlap = std::make_shared<RNToRMProjection>(space_A, space_C, std::vector<size_t>({1,2}));
     BOOST_CHECK(!A->addChild(C, projAC_overlap));
 
     //Wrong dimensions
-    BOOST_CHECK_THROW(std::make_shared<Projection_RN_RM>(space_A, space_C, std::vector<size_t>({1})), std::out_of_range);
-    BOOST_CHECK_THROW(std::make_shared<Projection_RN_RM>(space_A, space_C, std::vector<size_t>({2,3,0})), std::exception);
+    BOOST_CHECK_THROW(std::make_shared<RNToRMProjection>(space_A, space_C, std::vector<size_t>({1})), std::out_of_range);
+    BOOST_CHECK_THROW(std::make_shared<RNToRMProjection>(space_A, space_C, std::vector<size_t>({2,3,0})), std::exception);
 
     //Projection has wrong preimage
-    ompl::multilevel::ProjectionPtr projAC = std::make_shared<Projection_RN_RM>(space_A, space_C);
+    ompl::multilevel::ProjectionPtr projAC = std::make_shared<RNToRMProjection>(space_A, space_C);
     BOOST_CHECK(!B->addChild(C, projAC)); //Projection from A->C, but parent class is B
 
     //Projection has wrong image
-    ompl::multilevel::ProjectionPtr projAB_other = std::make_shared<Projection_RN_RM>(space_A, space_B, std::vector<size_t>({2,3}));
+    ompl::multilevel::ProjectionPtr projAB_other = std::make_shared<RNToRMProjection>(space_A, space_B, std::vector<size_t>({2,3}));
     BOOST_CHECK(!A->addChild(C, projAB_other)); //Projection from A->B, but required child is C
 }
 
@@ -121,7 +121,6 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_MultiLevelConnection)
     // E(2)
     // |
     // F(1)
-    std::cout << "ÐONE" << std::endl;
 
     ompl::base::StateSpacePtr space_A = CreateCubeStateSpace(6);
     space_A->setName("SpaceA");
@@ -147,11 +146,11 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_MultiLevelConnection)
     space_F->setName("SpaceF");
     auto F = std::make_shared<FactoredSpaceInformation>(space_F);
 
-    auto projAB = std::make_shared<Projection_RN_RM>(space_A, space_B);
-    auto projBC = std::make_shared<Projection_RN_RM>(space_B, space_C);
-    auto projCD = std::make_shared<Projection_RN_RM>(space_C, space_D);
-    auto projDE = std::make_shared<Projection_RN_RM>(space_D, space_E);
-    auto projEF = std::make_shared<Projection_RN_RM>(space_E, space_F);
+    auto projAB = std::make_shared<RNToRMProjection>(space_A, space_B);
+    auto projBC = std::make_shared<RNToRMProjection>(space_B, space_C);
+    auto projCD = std::make_shared<RNToRMProjection>(space_C, space_D);
+    auto projDE = std::make_shared<RNToRMProjection>(space_D, space_E);
+    auto projEF = std::make_shared<RNToRMProjection>(space_E, space_F);
 
     A->addChild(B, projAB);
     B->addChild(C, projBC);
@@ -219,10 +218,10 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_DecompositionConnection)
     space_E->setName("SpaceE");
     auto E = std::make_shared<FactoredSpaceInformation>(space_E);
 
-    ompl::multilevel::ProjectionPtr projAB = std::make_shared<Projection_RN_RM>(space_A, space_B, std::vector<size_t>({0,1}));
-    ompl::multilevel::ProjectionPtr projAC = std::make_shared<Projection_RN_RM>(space_A, space_C, std::vector<size_t>({2,3}));
-    ompl::multilevel::ProjectionPtr projAD = std::make_shared<Projection_RN_RM>(space_A, space_D, std::vector<size_t>({4,5}));
-    ompl::multilevel::ProjectionPtr projAE = std::make_shared<Projection_RN_RM>(space_A, space_E, std::vector<size_t>({6,7}));
+    ompl::multilevel::ProjectionPtr projAB = std::make_shared<RNToRMProjection>(space_A, space_B, std::vector<size_t>({0,1}));
+    ompl::multilevel::ProjectionPtr projAC = std::make_shared<RNToRMProjection>(space_A, space_C, std::vector<size_t>({2,3}));
+    ompl::multilevel::ProjectionPtr projAD = std::make_shared<RNToRMProjection>(space_A, space_D, std::vector<size_t>({4,5}));
+    ompl::multilevel::ProjectionPtr projAE = std::make_shared<RNToRMProjection>(space_A, space_E, std::vector<size_t>({6,7}));
 
     A->addChild(B, projAB);
     A->addChild(C, projAC);
@@ -283,9 +282,9 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_FactorTree)
     space_D->setName("SpaceD");
     auto D = std::make_shared<FactoredSpaceInformation>(space_D);
 
-    auto projAB = std::make_shared<Projection_RN_RM>(space_A, space_B);
-    auto projBD = std::make_shared<Projection_RN_RM>(space_B, space_D);
-    auto projAC = std::make_shared<Projection_RN_RM>(space_A, space_C, std::vector<size_t>({4,5}));
+    auto projAB = std::make_shared<RNToRMProjection>(space_A, space_B);
+    auto projBD = std::make_shared<RNToRMProjection>(space_B, space_D);
+    auto projAC = std::make_shared<RNToRMProjection>(space_A, space_C, std::vector<size_t>({4,5}));
 
     A->addChild(B, projAB);
     A->addChild(C, projAC);
