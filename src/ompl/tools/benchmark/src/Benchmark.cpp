@@ -283,7 +283,6 @@ bool ompl::tools::Benchmark::saveResultsToFile(const char *filename) const
     if (fout.good())
     {
         result = saveResultsToStream(fout);
-        OMPL_INFORM("Results saved to '%s'", filename);
     }
     else
     {
@@ -291,7 +290,11 @@ bool ompl::tools::Benchmark::saveResultsToFile(const char *filename) const
         if (getResultsFilename(exp_) != std::string(filename))
             result = saveResultsToFile();
 
-        OMPL_ERROR("Unable to write results to '%s'", filename);
+    }
+    if (result) {
+      OMPL_INFORM("Results saved to '%s'", filename);
+    } else {
+      OMPL_ERROR("Unable to write results to '%s'", filename);
     }
     return result;
 }
