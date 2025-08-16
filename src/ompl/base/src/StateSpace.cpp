@@ -1069,12 +1069,18 @@ double ompl::base::CompoundStateSpace::distance(const State *state1, const State
 {
     const auto *cstate1 = static_cast<const CompoundState *>(state1);
     const auto *cstate2 = static_cast<const CompoundState *>(state2);
-    double dist = 0.0;
+    double maxDist = 0.0;
+    //double dist = 0.0;
     for (unsigned int i = 0; i < componentCount_; ++i)
     {
-        dist += weights_[i] * components_[i]->distance(cstate1->components[i], cstate2->components[i]);
+        //dist += weights_[i] * componentDist;
+        auto componentDist = components_[i]->distance(cstate1->components[i], cstate2->components[i]);
+        if (componentDist > maxDist) {
+            maxDist = componentDist;
+        }
     }
-    return dist;
+    return maxDist;
+    //return dist;
 }
 
 void ompl::base::CompoundStateSpace::setLongestValidSegmentFraction(double segmentFraction)

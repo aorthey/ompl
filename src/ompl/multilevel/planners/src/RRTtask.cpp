@@ -287,7 +287,6 @@ ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTe
         }
     }
 
-    //bool solved = false;
     bool approximate = false;
     if (solution == nullptr)
     {

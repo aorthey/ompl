@@ -229,16 +229,22 @@ void ompl::base::RealVectorStateSpace::deserialize(State *state, const void *ser
 
 double ompl::base::RealVectorStateSpace::distance(const State *state1, const State *state2) const
 {
-    double dist = 0.0;
     const double *s1 = static_cast<const StateType *>(state1)->values;
     const double *s2 = static_cast<const StateType *>(state2)->values;
 
+    double maxDiff = 0.0;
+    //double dist = 0.0;
     for (unsigned int i = 0; i < dimension_; ++i)
     {
-        double diff = (*s1++) - (*s2++);
-        dist += diff * diff;
+        double diff = std::abs((*s1++) - (*s2++));
+        if(diff > maxDiff) {
+            maxDiff = diff;
+        }
+        // double diff = (*s1++) - (*s2++);
+        // dist += diff * diff;
     }
-    return sqrt(dist);
+    //return sqrt(dist);
+    return maxDiff;
 }
 
 bool ompl::base::RealVectorStateSpace::equalStates(const State *state1, const State *state2) const
