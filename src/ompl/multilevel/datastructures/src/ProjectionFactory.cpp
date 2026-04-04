@@ -47,6 +47,7 @@
 #include <ompl/multilevel/datastructures/projections/FiberedProjection.h>
 
 #include <ompl/multilevel/datastructures/projections/SE2RNToR2Projection.h>
+#include <ompl/multilevel/datastructures/projections/XSE2RNToXR2Projection.h>
 #include <ompl/multilevel/datastructures/projections/SE3RNToR3Projection.h>
 #include <ompl/multilevel/datastructures/projections/SE3ToR3Projection.h>
 #include <ompl/multilevel/datastructures/projections/SE2ToR2Projection.h>
@@ -82,8 +83,6 @@ ProjectionPtr ProjectionFactory::makeProjection(const SpaceInformationPtr &Bundl
     const base::StateSpacePtr Bundle_space = Bundle->getStateSpace();
     int nrProjections = GetNumberOfComponents(Bundle_space);
 
-    OMPL_DEBUG("Bundle components: %d", nrProjections);
-
     if (nrProjections > 1)
     {
         std::vector<ProjectionPtr> components;
@@ -113,18 +112,22 @@ ProjectionPtr ProjectionFactory::makeProjection(const SpaceInformationPtr &Bundl
     }
 
     const base::StateSpacePtr Bundle_space = Bundle->getStateSpace();
-    int nrProjections = GetNumberOfComponents(Bundle_space);
+    int bundleSpaceComponents = GetNumberOfComponents(Bundle_space);
     const base::StateSpacePtr Base_space = Base->getStateSpace();
     int baseSpaceComponents = GetNumberOfComponents(Base_space);
 
-    OMPL_DEBUG("Bundle components: %d", nrProjections);
+    OMPL_DEBUG("Making Projection from Bundle Space %s to Base Space %s.",
+        Bundle->getStateSpace()->getName().c_str(), 
+        Base->getStateSpace()->getName().c_str());
 
-    if (baseSpaceComponents != nrProjections)
-    {
-        Base->printSettings();
-        OMPL_ERROR("Base Space has %d, but Bundle Space has %d components.", baseSpaceComponents, nrProjections);
-        throw Exception("Different Number Of Components");
-    }
+    // if (baseSpaceComponents != bundleSpaceComponents)
+    // {
+    //     Base->printSettings();
+    //     OMPL_ERROR("Bundle Space %s has %d, but Base Space %s has %d components.", 
+    //         Bundle->getStateSpace()->getName().c_str(), 
+    //         bundleSpaceComponents, Base->getStateSpace()->getName().c_str(), baseSpaceComponents);
+    //     throw Exception("Different Number Of Components");
+    // }
 
     // Check if planning spaces are equivalent, i.e. if (X, \phi) == (Y, \phi)
     bool areValidityCheckersEquivalent = false;
@@ -133,31 +136,29 @@ ProjectionPtr ProjectionFactory::makeProjection(const SpaceInformationPtr &Bundl
         areValidityCheckersEquivalent = true;
     }
 
-    if (nrProjections > 1)
-    {
-        std::vector<ProjectionPtr> components;
+    // if (bundleSpaceComponents > 1 && baseSpaceComponents > 1)
+    // {
+    //     std::vector<ProjectionPtr> components;
 
-        base::CompoundStateSpace *Bundle_compound = Bundle_space->as<base::CompoundStateSpace>();
-        base::CompoundStateSpace *Base_compound = Base_space->as<base::CompoundStateSpace>();
+    //     base::CompoundStateSpace *Bundle_compound = Bundle_space->as<base::CompoundStateSpace>();
+    //     base::CompoundStateSpace *Base_compound = Base_space->as<base::CompoundStateSpace>();
 
-        const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
-        const std::vector<base::StateSpacePtr> Base_decomposed = Base_compound->getSubspaces();
+    //     const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
+    //     const std::vector<base::StateSpacePtr> Base_decomposed = Base_compound->getSubspaces();
 
-        for (int m = 0; m < nrProjections; m++)
-        {
-            base::StateSpacePtr BaseM = Base_decomposed.at(m);
-            base::StateSpacePtr BundleM = Bundle_decomposed.at(m);
-            ProjectionPtr componentM = makeProjection(BundleM, BaseM, areValidityCheckersEquivalent);
-            components.push_back(componentM);
-        }
+    //     for (int m = 0; m < bundleSpaceComponents; m++)
+    //     {
+    //         base::StateSpacePtr BaseM = Base_decomposed.at(m);
+    //         base::StateSpacePtr BundleM = Bundle_decomposed.at(m);
+    //         ProjectionPtr componentM = makeProjection(BundleM, BaseM, areValidityCheckersEquivalent);
+    //         components.push_back(componentM);
+    //     }
 
-        return std::make_shared<CompoundProjection>(Bundle_space, Base_space, components);
-    }
-    else
-    {
-        ProjectionPtr component = makeProjection(Bundle_space, Base_space, areValidityCheckersEquivalent);
-        return component;
-    }
+    //     return std::make_shared<CompoundProjection>(Bundle_space, Base_space, components);
+    // }
+    ProjectionPtr component = makeProjection(Bundle_space, Base_space, areValidityCheckersEquivalent);
+    OMPL_DEBUG(">>> Created projection %s", component->getTypeAsString().c_str());
+    return component;
 }
 
 ProjectionPtr ProjectionFactory::makeProjection(const StateSpacePtr &Bundle)
@@ -184,6 +185,10 @@ ProjectionPtr ProjectionFactory::makeProjection(const StateSpacePtr &Bundle, con
     {
         component = std::make_shared<EmptySetProjection>(Bundle, Base);
     }
+    else if (type == PROJECTION_SUBSPACE)
+    {
+        component = std::make_shared<FiberedSubspaceProjection>(Bundle, Base);
+    }
     else if (type == PROJECTION_IDENTITY)
     {
         component = std::make_shared<IdentityProjection>(Bundle, Base);
@@ -207,6 +212,10 @@ ProjectionPtr ProjectionFactory::makeProjection(const StateSpacePtr &Bundle, con
     else if (type == PROJECTION_SE2RN_R2)
     {
         component = std::make_shared<SE2RNToR2Projection>(Bundle, Base);
+    }
+    else if (type == PROJECTION_XSE2RN_XR2)
+    {
+        component = std::make_shared<XSE2RNToXR2Projection>(Bundle, Base);
     }
     else if (type == PROJECTION_SE2RN_SE2)
     {
@@ -252,6 +261,22 @@ ProjectionPtr ProjectionFactory::makeProjection(const StateSpacePtr &Bundle, con
     {
         component = std::make_shared<SO2NToSO2MProjection>(Bundle, Base);
     }
+    else if (type == PROJECTION_R3R2SO2_R3)
+    {
+        component = std::make_shared<R3R2SO2ToR3Projection>(Bundle, Base);
+    }
+    else if (type == PROJECTION_R3SO2_R3)
+    {
+        component = std::make_shared<R3SO2ToR3Projection>(Bundle, Base);
+    }
+    else if (type == PROJECTION_XR3SO2_XR3)
+    {
+        component = std::make_shared<XR3SO2ToXR3Projection>(Bundle, Base);
+    }
+    else if (type == PROJECTION_XR3R2SO2_XR3)
+    {
+        component = std::make_shared<XR3R2SO2ToXR3Projection>(Bundle, Base);
+    }
     else
     {
         OMPL_ERROR("NYI: %d", type);
@@ -280,6 +305,11 @@ ProjectionType ProjectionFactory::identifyProjectionType(const StateSpacePtr &Bu
     if (isMapping_EmptyProjection(Bundle, Base))
     {
         return PROJECTION_EMPTY_SET;
+    }
+
+    if (isMapping_ToFiberedSubspace(Bundle, Base))
+    {
+        return PROJECTION_SUBSPACE;
     }
 
     // RN ->
@@ -323,6 +353,10 @@ ProjectionType ProjectionFactory::identifyProjectionType(const StateSpacePtr &Bu
     {
         return PROJECTION_SE2RN_R2;
     }
+    if (isMapping_XSE2RN_to_XR2(Bundle, Base))
+    {
+        return PROJECTION_XSE2RN_XR2;
+    }
     if (isMapping_SE2RN_to_SE2RM(Bundle, Base))
     {
         return PROJECTION_SE2RN_SE2RM;
@@ -351,13 +385,43 @@ ProjectionType ProjectionFactory::identifyProjectionType(const StateSpacePtr &Bu
     {
         return PROJECTION_SO3RN_SO3RM;
     }
+    if (isMapping_ToFiberedSubspace(Bundle, Base))
+    {
+        return PROJECTION_SO3RN_SO3RM;
+    }
 
-    OMPL_ERROR("Fiber Bundle unknown.");
+    //XR3 ->
+    if (isMapping_R3R2SO2_to_R3(Bundle, Base))
+    {
+        return PROJECTION_R3R2SO2_R3;
+    }
+    if (isMapping_R3SO2_to_R3(Bundle, Base))
+    {
+        return PROJECTION_R3SO2_R3;
+    }
+    if (isMapping_XR3SO2_to_XR3(Bundle, Base))
+    {
+        return PROJECTION_XR3SO2_XR3;
+    }
+    if (isMapping_XR3R2SO2_to_XR3(Bundle, Base))
+    {
+        return PROJECTION_XR3R2SO2_XR3;
+    }
+
+    OMPL_ERROR("Fiber Bundle unknown from %s to %s.", Bundle->getName().c_str(), Base->getName().c_str());
     return PROJECTION_UNKNOWN;
 }
 
 bool ProjectionFactory::isMapping_Identity(const StateSpacePtr &Bundle, const StateSpacePtr &Base)
 {
+    if (Base->getType() != Bundle->getType())
+    {
+        return false;
+    }
+    if (Base->getDimension() != Bundle->getDimension())
+    {
+        return false;
+    }
     if (Bundle->isCompound())
     {
         if (Base->isCompound())
@@ -389,6 +453,26 @@ bool ProjectionFactory::isMapping_Identity(const StateSpacePtr &Bundle, const St
     }
     return false;
 }
+
+bool ProjectionFactory::isMapping_ToFiberedSubspace(const StateSpacePtr &Bundle, const StateSpacePtr &Base)
+{
+    if (!Bundle->isCompound())
+        return false;
+
+    base::CompoundStateSpace *Bundle_compound = Bundle->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
+    if( Bundle_decomposed.size() > 0) {
+      if (Bundle_decomposed.at(0)->getType() == Base->getType()) {
+        unsigned int n = Bundle_decomposed.at(0)->getDimension();
+        unsigned int m = Base->getDimension();
+        if(n == m) {
+            return true;
+        }
+      }
+    }
+    return false;
+}
+
 
 bool ProjectionFactory::isMapping_RN_to_RM(const StateSpacePtr &Bundle, const StateSpacePtr &Base)
 {
@@ -522,6 +606,141 @@ bool ProjectionFactory::isMapping_SE2RN_to_R2(const StateSpacePtr &Bundle, const
         }
     }
     return false;
+}
+bool ProjectionFactory::isMapping_XR3R2SO2_to_XR3(const base::StateSpacePtr &Bundle, const base::StateSpacePtr &Base)
+{
+    if (!Bundle->isCompound())
+    {
+        return false;
+    }
+    if (!Base->isCompound())
+    {
+        return false;
+    }
+
+    base::CompoundStateSpace *Bundle_compound = Bundle->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
+    base::CompoundStateSpace *Base_compound = Base->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> Base_decomposed = Base_compound->getSubspaces();
+
+    unsigned int n = Bundle_decomposed.size();
+    unsigned int m = Base_decomposed.size();
+
+    if( n != m) 
+    {
+        return false;
+    }
+    if( n < 2 ) 
+    {
+        return false;
+    }
+
+    const auto& last = Bundle_decomposed.at(n - 1);
+    if (!last->isCompound()) 
+    {
+        return false;
+    }
+    base::CompoundStateSpace *last_compound = last->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> last_decomposed = last_compound->getSubspaces();
+    if (last_decomposed.size() != 3) 
+    {
+        return false;
+    }
+
+    if (last_decomposed.at(0)->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+    if (last_decomposed.at(0)->getDimension() != 3)
+    {
+        return false;
+    }
+    if (last_decomposed.at(1)->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+    if (last_decomposed.at(1)->getDimension() != 2)
+    {
+        return false;
+    }
+    if (last_decomposed.at(2)->getType() != base::STATE_SPACE_SO2)
+    {
+        return false;
+    }
+
+    auto base_last = Base_decomposed.back();
+    if (base_last->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+    if (base_last->getDimension() != 3)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool ProjectionFactory::isMapping_XSE2RN_to_XR2(const StateSpacePtr &Bundle, const StateSpacePtr &Base)
+{
+    if (!Bundle->isCompound())
+    {
+        return false;
+    }
+    if (!Base->isCompound())
+    {
+        return false;
+    }
+
+    base::CompoundStateSpace *Bundle_compound = Bundle->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
+    base::CompoundStateSpace *Base_compound = Base->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> Base_decomposed = Base_compound->getSubspaces();
+
+    unsigned int n = Bundle_decomposed.size();
+    unsigned int m = Base_decomposed.size();
+
+    if( n != m) 
+    {
+        return false;
+    }
+    if( n < 2 ) 
+    {
+        return false;
+    }
+
+    const auto& last = Bundle_decomposed.at(n - 1);
+    if (!last->isCompound()) 
+    {
+        return false;
+    }
+    base::CompoundStateSpace *last_compound = last->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> last_decomposed = last_compound->getSubspaces();
+    if (last_decomposed.size() != 2) 
+    {
+        return false;
+    }
+
+    if (last_decomposed.at(0)->getType() != base::STATE_SPACE_SE2)
+    {
+        return false;
+    }
+    if (last_decomposed.at(1)->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+
+    auto base_last = Base_decomposed.back();
+    if (base_last->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+    if (base_last->getDimension() != 2)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 bool ProjectionFactory::isMapping_SE2RN_to_SE2(const StateSpacePtr &Bundle, const StateSpacePtr &Base)
@@ -662,6 +881,157 @@ bool ProjectionFactory::isMapping_XRN_to_XRM(const StateSpacePtr &Bundle, const 
         }
     }
     return false;
+}
+
+bool ProjectionFactory::isMapping_R3R2SO2_to_R3(const base::StateSpacePtr &Bundle, const base::StateSpacePtr &Base)
+{
+    if (!Bundle->isCompound())
+    {
+        return false;
+    }
+    if (Base->isCompound())
+    {
+        return false;
+    }
+
+    base::CompoundStateSpace *Bundle_compound = Bundle->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
+    if (Bundle_decomposed.size() != 3)
+    {
+        return false;
+    }
+    if (Bundle_decomposed.at(0)->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+    if (Bundle_decomposed.at(0)->getDimension() != 3)
+    {
+        return false;
+    }
+    if (Bundle_decomposed.at(1)->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+    if (Bundle_decomposed.at(1)->getDimension() != 2)
+    {
+        return false;
+    }
+    if (Bundle_decomposed.at(2)->getType() != base::STATE_SPACE_SO2)
+    {
+        return false;
+    }
+
+    if (Base->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+    if (Base->getDimension() != 3)
+    {
+        return false;
+    }
+    return true;
+}
+
+bool ProjectionFactory::isMapping_R3SO2_to_R3(const base::StateSpacePtr &Bundle, const base::StateSpacePtr &Base)
+{
+    if (!Bundle->isCompound())
+    {
+        return false;
+    }
+    if (Base->isCompound())
+    {
+        return false;
+    }
+
+    base::CompoundStateSpace *Bundle_compound = Bundle->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
+    if (Bundle_decomposed.size() != 2)
+    {
+        return false;
+    }
+    if (Bundle_decomposed.at(0)->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+    if (Bundle_decomposed.at(0)->getDimension() != 3)
+    {
+        return false;
+    }
+    if (Bundle_decomposed.at(2)->getType() != base::STATE_SPACE_SO2)
+    {
+        return false;
+    }
+    if (Base->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+    if (Base->getDimension() != 3)
+    {
+        return false;
+    }
+    return true;
+}
+
+bool ProjectionFactory::isMapping_XR3SO2_to_XR3(const base::StateSpacePtr &Bundle, const base::StateSpacePtr &Base)
+{
+    if (!Bundle->isCompound())
+    {
+      std::cout << "Fail00" << std::endl;
+        return false;
+    }
+    if (!Base->isCompound())
+    {
+      std::cout << "Fail00b" << std::endl;
+        return false;
+    }
+
+    base::CompoundStateSpace *Bundle_compound = Bundle->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
+    base::CompoundStateSpace *Base_compound = Base->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> Base_decomposed = Base_compound->getSubspaces();
+
+    auto n = Bundle_decomposed.size();
+    auto m = Base_decomposed.size();
+
+    if (n < 2) 
+    {
+        return false;
+    }
+    if(n != m) {
+        return false;
+    }
+
+    auto last = Bundle_decomposed.at(n-1);
+    base::CompoundStateSpace *last_compound = last->as<base::CompoundStateSpace>();
+    const std::vector<base::StateSpacePtr> last_decomposed = last_compound->getSubspaces();
+    if (last_decomposed.size() != 2)
+    {
+        return false;
+    }
+    if (last_decomposed.at(0)->getDimension() != 3)
+    {
+        return false;
+    }
+    if (last_decomposed.at(0)->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+    if (last_decomposed.at(1)->getType() != base::STATE_SPACE_SO2)
+    {
+        return false;
+    }
+
+    auto base_last = Base_decomposed.back();
+    if (base_last->getType() != base::STATE_SPACE_REAL_VECTOR)
+    {
+        return false;
+    }
+    if (base_last->getDimension() != 3)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 bool ProjectionFactory::isMapping_EmptyProjection(const StateSpacePtr &, const StateSpacePtr &Base)

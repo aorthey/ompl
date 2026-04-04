@@ -47,7 +47,7 @@ using namespace ompl::base;
 XR3SO2ToXR3Projection::XR3SO2ToXR3Projection(ompl::base::StateSpacePtr BundleSpace, ompl::base::StateSpacePtr BaseSpace)
   : BaseT(BundleSpace, BaseSpace)
 {
-    setType(PROJECTION_R3SO2_R3);
+    setType(PROJECTION_XR3SO2_XR3);
     if(!BundleSpace->isCompound())
     {
         throw ompl::Exception("BundleSpace is not compound, but should be XR3SO2");

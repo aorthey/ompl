@@ -119,6 +119,15 @@ namespace ompl
             /** \brief R3 \times SO2 \rightarrow R3 */
             PROJECTION_R3SO2_R3 = 23,
 
+            /** \brief X \times R3 \times SO2 \rightarrow X \times R3 */
+            PROJECTION_XR3SO2_XR3 = 24,
+
+            /** \brief X \times SE2 \times RN \rightarrow X \times R2 */
+            PROJECTION_XSE2RN_XR2 = 25,
+
+            /** \brief X \times R3 \times R2 \times SO2 \rightarrow X \times R3 */
+            PROJECTION_XR3R2SO2_XR3 = 26,
+
             /** \brief Compound projection */
             PROJECTION_COMPOUND = -2,
 

@@ -89,6 +89,8 @@ namespace ompl
 
             /** \brief Check if the mapping is an identity mapping */
             bool isMapping_Identity(const base::StateSpacePtr &, const base::StateSpacePtr &);
+            /** \brief Check if the mapping is a subspace mapping */
+            bool isMapping_ToFiberedSubspace(const base::StateSpacePtr &, const base::StateSpacePtr &);
             /** \brief Check if the mapping is an empty projection */
             bool isMapping_EmptyProjection(const base::StateSpacePtr &, const base::StateSpacePtr &);
             /** \brief Check if mapping is
@@ -148,6 +150,12 @@ namespace ompl
              * whereby \f$ X = \{\mathrm{SO}(2),\mathrm{SO}(3),\mathrm{SE}(2),\mathrm{SE}(3)\} \f$ */
             bool isMapping_XRN_to_X(const base::StateSpacePtr &, const base::StateSpacePtr &,
                                     const base::StateSpaceType);
+
+            bool isMapping_R3R2SO2_to_R3(const base::StateSpacePtr &, const base::StateSpacePtr &);
+            bool isMapping_R3SO2_to_R3(const base::StateSpacePtr &, const base::StateSpacePtr &);
+            bool isMapping_XR3SO2_to_XR3(const base::StateSpacePtr &, const base::StateSpacePtr &);
+            bool isMapping_XSE2RN_to_XR2(const base::StateSpacePtr &, const base::StateSpacePtr &);
+            bool isMapping_XR3R2SO2_to_XR3(const base::StateSpacePtr &, const base::StateSpacePtr &);
 
             /** \brief Estimate number of components on state space */
             int GetNumberOfComponents(const base::StateSpacePtr &space);

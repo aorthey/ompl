@@ -556,6 +556,22 @@ BOOST_AUTO_TEST_CASE(Sphere_Simple)
     s2->setPhi(+PI/2.0);
     BOOST_OMPL_EXPECT_NEAR(m->distance(s2.get(), s1.get()), PI/3, 1e-3);
     BOOST_OMPL_EXPECT_NEAR(m->distance(s1.get(), s2.get()), PI/3, 1e-3);
+
+    base::StateSamplerPtr s = m->allocStateSampler();
+    base::ScopedState<base::SphereStateSpace> x(m);
+    base::ScopedState<base::SphereStateSpace> y(m);
+    x.random();
+    for (int i = 0; i < 100; ++i)
+    {
+        s->sampleUniformNear(y.get(), x.get(), 0.1);
+        BOOST_CHECK(y.satisfiesBounds());
+        auto d = m->distance(x.get(), y.get());
+        BOOST_CHECK_LE(d, 0.2);
+
+        m->interpolate(x.get(), y.get(), 0.5, y.get()); 
+        d = m->distance(x.get(), y.get());
+        BOOST_CHECK_LE(d, 0.2);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(KleinBottle_Simple)

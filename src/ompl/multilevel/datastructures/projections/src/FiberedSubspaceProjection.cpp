@@ -14,13 +14,23 @@ size_t InferSubspaceindex(ompl::base::StateSpacePtr bundleSpace, ompl::base::Sta
   auto subspaces = compound_space->getSubspaces();
 
   for(size_t index = 0; index < subspaces.size(); index++) {
-    if(subspaces.at(index)->getName() == baseSpace->getName()) {
-      return index;
+    if(subspaces.at(index)->getType() == baseSpace->getType()) {
+      if(subspaces.at(index)->getDimension() == baseSpace->getDimension()) {
+        return index;
+      }
     }
   }
 
-  throw std::runtime_error("Could not find space " + baseSpace->getName() + " in parent space "
-      + bundleSpace->getName());
+  auto msg = "Could not find space " + baseSpace->getName() + " in parent space "
+      + bundleSpace->getName() + ". Bundle space contains spaces ";
+
+  auto delim = "";
+  for(const auto& subspace : subspaces) {
+    msg += delim + subspace->getName();
+    delim = ", ";
+  }
+
+  throw std::runtime_error(msg);
 }
 
 ompl::multilevel::FiberedSubspaceProjection::FiberedSubspaceProjection(
