@@ -87,10 +87,6 @@ Head::Head(const Head &rhs)
 
 Head::~Head()
 {
-    std::stringstream buffer;
-    buffer << *this;
-    OMPL_DEVMSG1("Last head before termination: %s.", buffer.str().c_str());
-
     auto projection = restriction_->getProjection();
     if (projection->getCoDimension() > 0)
     {
@@ -105,11 +101,6 @@ Head::~Head()
         auto base = projection->getBase();
         base->freeState(xBaseCurrent_);
     }
-
-    //auto bundle = projection->getBundle();
-    //bundle->freeState(xCurrent_->getState());
-    //bundle->freeState(xTarget_);
-
 }
 
 PathRestrictionPtr Head::getRestriction() const

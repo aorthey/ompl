@@ -11,8 +11,6 @@ using namespace ompl::multilevel;
 ompl::multilevel::FactoredSpaceInformation::FactoredSpaceInformation(const ompl::base::StateSpacePtr& space) : 
   ompl::base::SpaceInformation(space) 
 {
-  // auto name = space->getName() + "_" + std::to_string(space->getDimension()) + "D";
-  // space->setName(name);
   OMPL_INFORM("Create factor for space %s (dimensionality %d)", space->getName().c_str(), space->getDimension());
 }
 
@@ -246,8 +244,8 @@ const FactoredSpaceInformationPtr& FactoredSpaceInformation::getChild(const std:
           return child->getName() == name;
         });
   if(iterator == children_.end()) {
-    OMPL_ERROR("No child with name %s", name.c_str());
-    throw "NoChildError";
+    auto msg = "No child with name " + name;
+    throw std::runtime_error(msg);
   }
   return *iterator;
 }
@@ -278,16 +276,18 @@ void FactoredSpaceInformation::project(const base::State* state, const std::unor
   }
   if(children_.size() == 1) {
     if(childStates.size() != 1) {
-      OMPL_ERROR("Number of child states for factor %s is %d, which is different from children (%d).", getName().c_str(), childStates.size(), children_.size());
-      throw "InvalidStates";
+      auto msg = "Number of child states for factor " + getName() + " is " 
+        + std::to_string(childStates.size()) + ", which is different from number of children (" 
+        + std::to_string(children_.size()) + ").";
+      throw std::runtime_error(msg);
     }
     const auto& child = children_.front();
     const auto& projection = child->getProjection();
 
     const auto& name = childStates.begin()->first;
     if(name != child->getName()) {
-      OMPL_ERROR("Name of child state is %s, which is different from child (%s).", name.c_str(), child->getName().c_str());
-      throw "InvalidChildName";
+      auto msg = "Name of child state is " + name + ", which is different from child " + child->getName();
+      throw std::runtime_error(msg);
     }
     const auto& childState = childStates.begin()->second;
     projection->project(state, childState);

@@ -28,6 +28,9 @@ namespace ompl
             TreeNode* nearest(TreeNode* parent) const;
             TreeNode* getRoot() const;
 
+            TreeNode* At(const int& n) const;
+            TreeNode* operator[](const int& n) const;
+
           private:
             base::SpaceInformationPtr si_;
 

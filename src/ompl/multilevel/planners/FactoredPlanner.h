@@ -6,6 +6,7 @@
 #include "ompl/util/ClassForward.h"
 #include "ompl/multilevel/planners/RRTtask.h"
 #include "ompl/multilevel/datastructures/helpers/Expected.h"
+#include "ompl/multilevel/datastructures/helpers/SamplingHelper.h"
 
 #include <optional>
 
@@ -39,7 +40,6 @@ namespace ompl {
             ompl::base::State* MakeGoalState() const;
 
             void sampleFromDatastructure(ompl::base::State* state);
-            void sampleFromPath(const std::vector<base::State *>& path_states, ompl::base::State* state);
 
             size_t getNumberOfSamples() const;
 

@@ -50,8 +50,8 @@
 
 using namespace ompl::multilevel;
 
-PathRestriction::PathRestriction(const FactoredSpaceInformationPtr& factor, const ProjectionPtr& projection) :
-  factor_(factor), projection_(projection)
+PathRestriction::PathRestriction(const ompl::base::SpaceInformationPtr& si, const ProjectionPtr& projection) :
+  si_(si), projection_(projection)
 {
 }
 
@@ -95,7 +95,7 @@ void PathRestriction::setBasePath(std::vector<ompl::base::State *> basePath)
         lengthBasePath_ += lk;
         lengthsCumulativeBasePath_.push_back(lengthBasePath_);
     }
-    OMPL_DEBUG("Set new base path with %d states and length %f.", basePath_.size(), lengthBasePath_);
+    //OMPL_DEVMSG2("Set new base path with %d states and length %f.", basePath_.size(), lengthBasePath_);
 }
 
 void PathRestriction::interpolateBasePath(double t, ompl::base::State *&state) const
@@ -159,7 +159,7 @@ double PathRestriction::getLengthBasePathUntil(int k)
 {
     if (k > (int)size())
     {
-        OMPL_ERROR("Wrong index k=%d/%d", k, size());
+        OMPL_ERROR("Wrong index on base path. Queried index is %d but size is %d.", k, size());
         throw ompl::Exception("WrongIndex");
     }
     if (k <= 0)
@@ -184,8 +184,8 @@ int PathRestriction::getBasePathLastIndexFromLocation(double d)
     return ctr;
 }
 
-FactoredSpaceInformationPtr PathRestriction::getSpaceInformation() const {
-  return factor_;
+ompl::base::SpaceInformationPtr PathRestriction::getSpaceInformation() const {
+  return si_;
 }
 
 void PathRestriction::print(std::ostream &out) const

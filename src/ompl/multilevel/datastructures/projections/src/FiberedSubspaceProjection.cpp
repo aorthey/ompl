@@ -6,8 +6,11 @@
 
 size_t InferSubspaceindex(ompl::base::StateSpacePtr bundleSpace, ompl::base::StateSpacePtr baseSpace) {
 
+  if(baseSpace == nullptr) {
+      throw std::runtime_error("No base space");
+  }
   if(!bundleSpace->isCompound()) {
-    throw std::domain_error("Not a compound space:" + bundleSpace->getName());
+      throw std::domain_error("Not a compound space:" + bundleSpace->getName());
   }
   auto compound_space = bundleSpace->as<ompl::base::CompoundStateSpace>();
 

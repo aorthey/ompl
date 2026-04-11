@@ -87,12 +87,6 @@ namespace ompl
 
             virtual std::optional<PathSectionPtr> solve(const TreePtr& tree, const base::State* target) = 0;
 
-            /** \brief Sample state on fiber while keeping base state fixed */
-            //bool findFeasibleStateOnFiber(const base::State* xBase, base::State* xBundle);
-
-            /** \brief Triple step pattern */
-            //bool tripleStep(HeadPtr &head, const base::State *sBundleGoal, double locationOnBasePathGoal);
-
         protected:
             /** \brief Pointer to associated bundle space */
             PathRestrictionPtr restriction_;

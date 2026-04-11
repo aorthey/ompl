@@ -1,6 +1,7 @@
 #include "ompl/multilevel/planners/FactoredPlanner.h"
 #include "ompl/multilevel/planners/RestrictionSampler.h"
 #include "ompl/multilevel/datastructures/FactoredSpaceInformation.h"
+#include <ompl/multilevel/datastructures/helpers/SamplingHelper.h>
 #include <ompl/multilevel/datastructures/pathrestriction/PathRestriction.h>
 #include <ompl/multilevel/datastructures/pathrestriction/PathSection.h>
 #include <ompl/multilevel/datastructures/pathrestriction/FindSectionSideStep.h>
@@ -85,7 +86,6 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
 
     if(projection->isFibered())
     {
-      OMPL_INFORM("SectionSearch: Sequential Fibration");
       auto find_section = std::make_shared<FindSectionSideStep>(path_restriction);
       ompl::time::point tStart = ompl::time::now();
       auto maybe_section = find_section->solve(tree_, qGoal);
@@ -96,7 +96,6 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
       }
       return success(maybe_section.value());
     } else {
-      OMPL_INFORM("SectionSearch: Partial Fibration");
       auto maybe_section = partialFibrationSectionSolver(factor, tree_, path_restriction, qGoal);
       if(!maybe_section.has_value()) {
         return failure("Could not find section");
@@ -108,7 +107,6 @@ Expected<PathSectionPtr, std::string> FactoredPlanner::solveSection() {
   ////////////////////////////////////////////////////////////////////////////////
   // Parallel fibration
   ////////////////////////////////////////////////////////////////////////////////
-  OMPL_INFORM("SectionSearch: Parallel Fibration");
   std::unordered_map<std::string, PathRestrictionPtr> path_restrictions;
 
   for(const auto& child_planner : children_planner_) {
@@ -160,12 +158,9 @@ ompl::base::PlannerStatus FactoredPlanner::solve(const ompl::base::PlannerTermin
               for(const auto& node : nodes) {
                   if(goal->isSatisfied(node->getState())) {
                       makeSolutionPath(node, false, 0.0);
-                      OMPL_INFORM("Found section path solution.");
                       return ompl::base::PlannerStatus(ompl::base::PlannerStatus::EXACT_SOLUTION);
                   }
               }
-          } else {
-            OMPL_WARN("Found section, but last state is not in goal");
           }
       }
     }
@@ -213,113 +208,20 @@ void FactoredPlanner::setSeed(size_t seed)
   rng_ = ompl::RNG(seed);
 }
 
-void FactoredPlanner::sampleFromPath(const std::vector<base::State *>& path_states, ompl::base::State* state) 
-{
-  std::vector<double> distances;
-  for (unsigned int i = 1; i < path_states.size(); i++)
-  {
-      const double d = si_->distance(path_states.at(i - 1), path_states.at(i));
-      distances.push_back(d);
-  }
-  const double path_length = std::accumulate(distances.begin(), distances.end(), 0.0f);
-  if(path_length < 1e-3) {
-    OMPL_WARN("Path sampler uses path of length %f", path_length);
-    si_->copyState(state, path_states.front());
-    return;
-  }
-  const double random_position_on_path = rng_.uniformReal(0, path_length);
-
-  double current_distance = 0.0;
-  for (unsigned int i = 0; i < distances.size(); i++)
-  {
-      const double& d = distances.at(i);
-      current_distance += d;
-      if(current_distance > random_position_on_path) 
-      {
-        //r lies between path_states i+1 and i
-        const auto s1 = path_states.at(i);
-        const auto s2 = path_states.at(i + 1);
-
-        //   |--------------| d
-        //             |----| current_distance-random_position_on_path
-        //   |---------|      d - (current_distance-random_position_on_path)
-        //---|---------x----|------
-        //   s1        r    s2
-        if(d > 1e-3) 
-        {
-          const double s = (d - (current_distance -random_position_on_path))/d; //in [0,1]
-          si_->getStateSpace()->interpolate(s1, s2, s, state);
-        }else {
-          si_->copyState(state, s1);
-        }
-        return;
-      }
-  }
-  OMPL_ERROR("Path sampler reached end of method with length %f and random value %f", path_length, random_position_on_path);
-}
 
 size_t FactoredPlanner::getNumberOfSamples() const {
   return tree_->size();
 }
 
-void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state) 
-{
+void FactoredPlanner::sampleFromDatastructure(ompl::base::State* state) {
+  ompl::multilevel::DatastructureInformation info;
+  info.path_restriction_surrounding_sampling_bias = getPathRestrictionSurroundingSamplingBias();
+  info.path_restriction_sampling_bias = getPathRestrictionSamplingBias();
+  info.sampling_perturbation_bias = getSamplingPerturbationBias();
+  info.sampler = internal_space_sampler_;
+  info.pdef = getProblemDefinition();
+  info.si = si_;
+  info.number_of_nodes = tree_->size();
 
-    //Path restriction sampling
-    if(path_restriction_sampling_bias_ > 0.0) {
-      if(rng_.uniform01() < path_restriction_sampling_bias_) {
-        const auto& pdef = getProblemDefinition();
-        if(!pdef->hasSolution()) 
-        {
-          OMPL_WARN("Cannot sample from space without a solution.");
-          return;
-        }
-        const auto path = pdef->getSolutionPath()->as<geometric::PathGeometric>();
-        const std::vector<base::State *>& path_states = path->getStates();
-        sampleFromPath(path_states, state);
-        if(path_restriction_surrounding_sampling_bias_ > 0.0) {
-          internal_space_sampler_->sampleUniformNear(state, state, path_restriction_surrounding_sampling_bias_);
-        }
-        return;
-      }
-    }
-
-    //Tree restriction sampling (vertex version). RRTConnect.
-    //const size_t N = tStart_->size() + tGoal_->size();
-    //const size_t R = rng_.uniformInt(0, N-1);
-
-    //std::vector<Motion*> data;
-    //if(R < tStart_->size()) 
-    //{
-    //  //sample from start tree
-    //  tStart_->list(data);
-    //  si_->copyState(state, data.at(R)->state);
-    //} else {
-    //  //sample from goal tree
-    //  tGoal_->list(data);
-    //  si_->copyState(state, data.at(R - tStart_->size())->state);
-    //}
-
-    //Tree restriction sampling (vertex version). RRT style
-    const size_t N = tree_->size();
-    const size_t R = rng_.uniformInt(0, N-1);
-    si_->getStateSpace()->copyState(state, tree_->getNodes().at(R)->getState());
-
-    //if(random_config->parent == nullptr) {
-    //  si_->copyState(state, random_config->state);
-    //  return;
-    //}
-
-    //const double t = rng_.uniform01();
-    //const auto random_state = random_config->state;
-    //const auto parent_state = random_config->parent->state;
-    //si_->getStateSpace()->interpolate(parent_state, random_state, t, state);
-    //// OMPL_WARN("Sample state");
-    //// si_->printState(state);
-
-    ////Randomly perturbate state
-    if(sampling_perturbation_bias_ > 0.0) {
-      internal_space_sampler_->sampleUniformNear(state, state, sampling_perturbation_bias_);
-    }
-
+  ::sampleFromDatastructure(info, *tree_, rng_, state);
 }

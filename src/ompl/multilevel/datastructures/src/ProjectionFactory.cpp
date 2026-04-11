@@ -112,9 +112,9 @@ ProjectionPtr ProjectionFactory::makeProjection(const SpaceInformationPtr &Bundl
     }
 
     const base::StateSpacePtr Bundle_space = Bundle->getStateSpace();
-    int bundleSpaceComponents = GetNumberOfComponents(Bundle_space);
+    //int bundleSpaceComponents = GetNumberOfComponents(Bundle_space);
     const base::StateSpacePtr Base_space = Base->getStateSpace();
-    int baseSpaceComponents = GetNumberOfComponents(Base_space);
+    //int baseSpaceComponents = GetNumberOfComponents(Base_space);
 
     OMPL_DEBUG("Making Projection from Bundle Space %s to Base Space %s.",
         Bundle->getStateSpace()->getName().c_str(), 
@@ -170,6 +170,13 @@ ProjectionPtr ProjectionFactory::makeProjection(const StateSpacePtr &Bundle, con
                                                 bool areValidityCheckersEquivalent)
 {
     ProjectionType type = identifyProjectionType(Bundle, Base);
+
+    std::string s1 = ((Bundle != nullptr) ? stateTypeToString(Bundle) : "Null");
+    std::string s2 = ((Base != nullptr) ? stateTypeToString(Base) : "Null");
+    OMPL_DEBUG("Found projection %s for spaces %s -> %s", AsString(type).c_str(),
+        s1.c_str(), s2.c_str());
+
+
     if (type == PROJECTION_IDENTITY && !areValidityCheckersEquivalent)
     {
         type = PROJECTION_CONSTRAINED_RELAXATION;
@@ -306,20 +313,22 @@ ProjectionType ProjectionFactory::identifyProjectionType(const StateSpacePtr &Bu
     {
         return PROJECTION_EMPTY_SET;
     }
-
-    if (isMapping_ToFiberedSubspace(Bundle, Base))
+    //XR3 ->
+    if (isMapping_R3R2SO2_to_R3(Bundle, Base))
     {
-        return PROJECTION_SUBSPACE;
+        return PROJECTION_R3R2SO2_R3;
     }
-
-    // RN ->
-    if (isMapping_RN_to_RM(Bundle, Base))
+    if (isMapping_R3SO2_to_R3(Bundle, Base))
     {
-        return PROJECTION_RN_RM;
+        return PROJECTION_R3SO2_R3;
     }
-    if (isMapping_RNSO2_to_RN(Bundle, Base))
+    if (isMapping_XR3SO2_to_XR3(Bundle, Base))
     {
-        return PROJECTION_RNSO2_RN;
+        return PROJECTION_XR3SO2_XR3;
+    }
+    if (isMapping_XR3R2SO2_to_XR3(Bundle, Base))
+    {
+        return PROJECTION_XR3R2SO2_XR3;
     }
 
     // SE3 ->
@@ -385,27 +394,19 @@ ProjectionType ProjectionFactory::identifyProjectionType(const StateSpacePtr &Bu
     {
         return PROJECTION_SO3RN_SO3RM;
     }
+
     if (isMapping_ToFiberedSubspace(Bundle, Base))
     {
-        return PROJECTION_SO3RN_SO3RM;
+        return PROJECTION_SUBSPACE;
     }
-
-    //XR3 ->
-    if (isMapping_R3R2SO2_to_R3(Bundle, Base))
+    // RN ->
+    if (isMapping_RN_to_RM(Bundle, Base))
     {
-        return PROJECTION_R3R2SO2_R3;
+        return PROJECTION_RN_RM;
     }
-    if (isMapping_R3SO2_to_R3(Bundle, Base))
+    if (isMapping_RNSO2_to_RN(Bundle, Base))
     {
-        return PROJECTION_R3SO2_R3;
-    }
-    if (isMapping_XR3SO2_to_XR3(Bundle, Base))
-    {
-        return PROJECTION_XR3SO2_XR3;
-    }
-    if (isMapping_XR3R2SO2_to_XR3(Bundle, Base))
-    {
-        return PROJECTION_XR3R2SO2_XR3;
+        return PROJECTION_RNSO2_RN;
     }
 
     OMPL_ERROR("Fiber Bundle unknown from %s to %s.", Bundle->getName().c_str(), Base->getName().c_str());
@@ -457,7 +458,9 @@ bool ProjectionFactory::isMapping_Identity(const StateSpacePtr &Bundle, const St
 bool ProjectionFactory::isMapping_ToFiberedSubspace(const StateSpacePtr &Bundle, const StateSpacePtr &Base)
 {
     if (!Bundle->isCompound())
+    {
         return false;
+    }
 
     base::CompoundStateSpace *Bundle_compound = Bundle->as<base::CompoundStateSpace>();
     const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
@@ -855,6 +858,7 @@ bool ProjectionFactory::isMapping_XRN_to_XRM(const StateSpacePtr &Bundle, const 
 
     base::CompoundStateSpace *Bundle_compound = Bundle->as<base::CompoundStateSpace>();
     const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
+
     if (Bundle_decomposed.size() == 2)
     {
         if (Bundle_decomposed.at(0)->getType() == type &&
@@ -957,7 +961,7 @@ bool ProjectionFactory::isMapping_R3SO2_to_R3(const base::StateSpacePtr &Bundle,
     {
         return false;
     }
-    if (Bundle_decomposed.at(2)->getType() != base::STATE_SPACE_SO2)
+    if (Bundle_decomposed.at(1)->getType() != base::STATE_SPACE_SO2)
     {
         return false;
     }
@@ -976,12 +980,10 @@ bool ProjectionFactory::isMapping_XR3SO2_to_XR3(const base::StateSpacePtr &Bundl
 {
     if (!Bundle->isCompound())
     {
-      std::cout << "Fail00" << std::endl;
         return false;
     }
     if (!Base->isCompound())
     {
-      std::cout << "Fail00b" << std::endl;
         return false;
     }
 
@@ -1000,8 +1002,11 @@ bool ProjectionFactory::isMapping_XR3SO2_to_XR3(const base::StateSpacePtr &Bundl
     if(n != m) {
         return false;
     }
-
     auto last = Bundle_decomposed.at(n-1);
+    if (!last->isCompound())
+    {
+        return false;
+    }
     base::CompoundStateSpace *last_compound = last->as<base::CompoundStateSpace>();
     const std::vector<base::StateSpacePtr> last_decomposed = last_compound->getSubspaces();
     if (last_decomposed.size() != 2)

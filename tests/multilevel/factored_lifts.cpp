@@ -411,9 +411,9 @@ BOOST_AUTO_TEST_CASE(FactoredSpaceInformation_SubspaceProjection)
     ////////////////////////////////////////////////////////////////////////////////
 
     //Cannot create a projecton when space is not a subspace
-    auto NonExistentSpace = CreateCubeStateSpace(2);
-    NonExistentSpace->setName("NonExistentSpace");
-    BOOST_CHECK_THROW(std::make_shared<FiberedSubspaceProjection>(Aspace, NonExistentSpace), std::exception);
+    auto NonSubspace = CreateCubeStateSpace(3);
+    NonSubspace->setName("NonSubspace");
+    BOOST_CHECK_THROW(std::make_shared<FiberedSubspaceProjection>(Aspace, NonSubspace), std::exception);
 
     //Cannot add child when projection points to a different subspace
     auto projAY = std::make_shared<FiberedSubspaceProjection>(Aspace, Y);

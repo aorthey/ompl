@@ -103,7 +103,6 @@ std::optional<PathSectionPtr> FindSectionSideStep::recursiveSideStep(const TreeP
     auto resultAndNewHead = section->checkMotion(tree, head);
     if (resultAndNewHead.first)
     {
-        OMPL_DEVMSG1("Found section on depth %d", depth);
         return section;
     }
 

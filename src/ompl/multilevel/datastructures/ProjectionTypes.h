@@ -39,6 +39,8 @@
 #ifndef OMPL_MULTILEVEL_DATASTRUCTURES_PROJECTIONTYPES_
 #define OMPL_MULTILEVEL_DATASTRUCTURES_PROJECTIONTYPES_
 
+#include <string>
+
 namespace ompl
 {
     namespace multilevel
@@ -134,6 +136,8 @@ namespace ompl
             /** \brief Unknown projection */
             PROJECTION_UNKNOWN = -1
         };
+
+        std::string AsString(const ProjectionType& type);
     }
 }
 

@@ -40,7 +40,7 @@
 #define OMPL_MULTILEVEL_DATASTRUCTURES_PATHRESTRICTION_PATH_RESTRICTION__
 
 #include <ompl/multilevel/datastructures/Projection.h>
-#include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
+#include <ompl/base/SpaceInformation.h>
 #include <ompl/multilevel/datastructures/pathrestriction/FindSectionTypes.h>
 
 #include <optional>
@@ -52,6 +52,8 @@ namespace ompl
         /// @cond IGNORE
         /** \brief Forward declaration of ompl::base::Path */
         OMPL_CLASS_FORWARD(Path);
+        /** \brief Forward declaration of ompl::base::SpaceInformation */
+        OMPL_CLASS_FORWARD(SpaceInformation);
         /// @endcond
     }
     namespace geometric
@@ -100,7 +102,7 @@ namespace ompl
         {
         public:
             PathRestriction() = delete;
-            PathRestriction(const FactoredSpaceInformationPtr& factor, const ProjectionPtr& projection);
+            PathRestriction(const base::SpaceInformationPtr& factor, const ProjectionPtr& projection);
 
             virtual ~PathRestriction();
 
@@ -126,7 +128,7 @@ namespace ompl
             ProjectionPtr getProjection() const;
 
             /** \brief Return pointer to underlying bundle space */
-            FactoredSpaceInformationPtr getSpaceInformation() const;
+            base::SpaceInformationPtr getSpaceInformation() const;
 
             /** \brief Length of base path */
             double getLengthBasePath() const;
@@ -157,7 +159,7 @@ namespace ompl
 
         protected:
             /** \brief Pointer to associated state space */
-            FactoredSpaceInformationPtr factor_;
+            base::SpaceInformationPtr si_;
 
             /** \brief Pointer to associated projection */
             ProjectionPtr projection_;

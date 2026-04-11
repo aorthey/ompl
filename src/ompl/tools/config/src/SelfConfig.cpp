@@ -96,7 +96,7 @@ namespace ompl
                     if (si)
                     {
                         range = si->getMaximumExtent() * magic::MAX_MOTION_LENGTH_AS_SPACE_EXTENT_FRACTION;
-                        OMPL_DEBUG("%sPlanner range detected to be %lf", context.c_str(), range);
+                        //OMPL_DEBUG("%sPlanner range detected to be %lf", context.c_str(), range);
                     }
                     else
                         OMPL_ERROR("%sUnable to detect planner range. SpaceInformation instance has expired.",

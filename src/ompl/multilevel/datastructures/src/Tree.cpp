@@ -77,3 +77,9 @@ TreeNode* Tree::nearest(TreeNode* parent) const {
 TreeNode* Tree::getRoot() const {
   return root_;
 }
+TreeNode* Tree::At(const int& n) const {
+  return getNodes().at(n);
+}
+TreeNode* Tree::operator[](const int& n) const {
+  return getNodes().at(n);
+}

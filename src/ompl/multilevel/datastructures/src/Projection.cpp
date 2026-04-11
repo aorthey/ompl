@@ -37,6 +37,7 @@
 /* Author: Andreas Orthey */
 
 #include <ompl/multilevel/datastructures/Projection.h>
+#include <ompl/multilevel/datastructures/ProjectionTypes.h>
 #include <ompl/multilevel/datastructures/StateTypeToString.h>
 
 #include <ompl/base/SpaceInformation.h>
@@ -111,7 +112,8 @@ std::string Projection::getTypeAsString() const
 {
     if (baseSpace_)
     {
-        std::string tstr = getBundleTypeAsString() + " -> " + getBaseTypeAsString();
+        std::string type = AsString(type_);
+        std::string tstr = getBundleTypeAsString() + " -> " + getBaseTypeAsString() + " [" + type + "]";
         if (type_ == PROJECTION_CONSTRAINED_RELAXATION)
         {
             tstr += " (relax)";

@@ -106,8 +106,6 @@ namespace ompl
             bool hasNonSolvedSiblings_(const FactoredSpaceInformationPtr& factor) const;
             bool hasValidProblemDefinition_(const FactoredSpaceInformationPtr& factor) const;
 
-            void createProblemDefinition_(const FactoredSpaceInformationPtr& factor, const base::State* parent_start, const base::GoalPtr& parent_goal);
-
             std::vector<FactoredPlannerPtr> getChildrenPlanner_(const FactoredSpaceInformationPtr& factor) const;
             std::optional<ompl::base::PlannerStatus> checkForInvalidPlannerStatus_() const;
 
@@ -137,6 +135,8 @@ namespace ompl
             base::PlannerStatus planner_status_;
 
             unsigned int iterations_{0};
+            unsigned int num_factors_{0};
+
             float bestCost_{std::numeric_limits<float>::infinity()};
             std::optional<double> global_range_;
             //bool smoothing_enabled_{false};

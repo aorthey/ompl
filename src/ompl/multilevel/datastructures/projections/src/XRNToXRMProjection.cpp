@@ -66,6 +66,12 @@ ompl::base::StateSpacePtr XRNToXRMProjection::computeFiberSpace()
     base::CompoundStateSpace *Bundle_compound = getBundle()->as<base::CompoundStateSpace>();
     const std::vector<base::StateSpacePtr> Bundle_decomposed = Bundle_compound->getSubspaces();
 
+    auto n = Bundle_decomposed.size();
+    if(n != 2) {
+      auto msg = "Bundle " + getBundle()->getName() + " has " + std::to_string(n) + " subspaces, but expected 2.";
+      throw std::runtime_error(msg);
+    }
+
     base::CompoundStateSpace *Base_compound = getBase()->as<base::CompoundStateSpace>();
     const std::vector<base::StateSpacePtr> Base_decomposed = Base_compound->getSubspaces();
 

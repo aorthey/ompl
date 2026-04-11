@@ -52,10 +52,10 @@ ompl::multilevel::RRTtask::RRTtask(const base::SpaceInformationPtr &si)
     Planner::declareParam<double>("goal_bias", this, &RRTtask::setGoalBias, &RRTtask::getGoalBias, "0.:.05:1.");
 
     if(std::dynamic_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator()) != nullptr) {
-      OMPL_INFORM("Using Task Space Capabilities for Planner %s", getName().c_str());
+      OMPL_DEVMSG2("Using Task Space Capabilities for Planner %s", getName().c_str());
         use_task_space_ = true;
     }else {
-      OMPL_INFORM("Not Using Task Space Capabilities for Planner %s", getName().c_str());
+      OMPL_DEVMSG2("Not Using Task Space Capabilities for Planner %s", getName().c_str());
     }
     random_node = new TreeNode(si_);
 }
@@ -91,7 +91,7 @@ void ompl::multilevel::RRTtask::setup()
 
     if (!pdef_)
     {
-        OMPL_INFORM("%s: problem definition is not set, deferring setup completion...", getName().c_str());
+        OMPL_DEVMSG2("%s: problem definition is not set, deferring setup completion...", getName().c_str());
         setup_ = false;
     } else {
       base::Goal *goal = pdef_->getGoal().get();
@@ -174,7 +174,7 @@ ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTe
         sampler_ = si_->allocStateSampler();
     }
 
-    OMPL_DEBUG("%s: Start planning with %u states already in datastructure", getName().c_str(), tree_->size());
+    OMPL_DEVMSG2("%s: Start planning with %u states already in datastructure", getName().c_str(), tree_->size());
 
     TreeNode *solution = nullptr;
     TreeNode *approxsol = nullptr;
@@ -189,16 +189,10 @@ ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTe
         /* sample random state (with goal biasing) */
         if(shouldSampleGoal(goal_s, iteration_counter_))
         {
-            if(kDebug) {
-              OMPL_WARN("Sample goal");
-            }
             goal_s->sampleGoal(random_node->getState());
         }
         else
         {
-            if(kDebug) {
-              OMPL_DEBUG("Sample state");
-            }
             sampler_->sampleUniform(random_node->getState());
         }
         iteration_counter_++;
@@ -210,24 +204,14 @@ ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTe
         TreeNode *nearest_node = tree_->nearest(random_node);
         base::State *new_state = random_node->getState();
 
-        if(kDebug) {
-        OMPL_DEBUG("Nearest state:");
-        si_->printState(nearest_node->getState());
-        }
         /* find state to add */
         double d = si_->distance(nearest_node->getState(), random_node->getState());
         if (d >= std::numeric_limits<double>::infinity()) {
           continue;
         }
-        if(kDebug) {
-          OMPL_DEBUG("Distance nearest to sample: %f", d);
-        }
 
         if(use_task_space_) {
 
-          if(kDebug) {
-            OMPL_DEBUG("Propagate motion");
-          }
           auto motion_validator = std::static_pointer_cast<ompl::multilevel::TaskSpaceMotionValidator>(si_->getMotionValidator());
           auto states = motion_validator->propagateMotion(nearest_node->getState(), new_state);
           if(states.size() <= 1) {
@@ -238,33 +222,16 @@ ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTe
           {
               nearest_node = tree_->addNodeAndParent(states[i], nearest_node);
           }
-          if(kDebug) {
-            OMPL_DEBUG("Reached new state:");
-            si_->printState(nearest_node->getState());
-          }
         } else {
           //Default checkMotion
           if (d > maxRange_)
           {
               si_->getStateSpace()->interpolate(nearest_node->getState(), random_node->getState(), maxRange_ / d, new_state);
           }
-          if(kDebug) {
-            OMPL_DEBUG("New state:");
-            si_->printState(new_state);
-            OMPL_DEBUG("Check motion");
-          }
           if (si_->checkMotion(nearest_node->getState(), new_state))
           {
-              if(kDebug) {
-                OMPL_DEBUG("Added valid connection:");
-                si_->printState(nearest_node->getState());
-                si_->printState(new_state);
-              }
               nearest_node = tree_->addNodeAndParent(new_state, nearest_node);
           } else {
-            if(kDebug) {
-              OMPL_DEBUG("Invalid");
-            }
             continue;
           }
         }
@@ -274,10 +241,6 @@ ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTe
         {
             approxdif = dist;
             solution = nearest_node;
-            if(kDebug) {
-              OMPL_DEBUG("Solution found and reached goal node");
-              si_->printState(nearest_node->getState());
-            }
             break;
         }
         if (dist < approxdif)
@@ -296,8 +259,6 @@ ompl::base::PlannerStatus ompl::multilevel::RRTtask::solve(const base::PlannerTe
         makeSolutionPath(solution, approximate, approxdif);
         solved_ = true;
     }
-
-    OMPL_DEBUG("%s: Created %u states", getName().c_str(), tree_->size());
 
     return {solved_, approximate};
 }

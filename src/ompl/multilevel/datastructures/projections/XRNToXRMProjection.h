@@ -55,8 +55,6 @@ namespace ompl
 
             virtual void projectFiber(const ompl::base::State *xBundle, ompl::base::State *xFiber) const override;
 
-            //virtual void project(const ompl::base::State *xBundle, ompl::base::State *xBase) const override = 0;
-
             virtual void lift(const ompl::base::State *xBase, const ompl::base::State *xFiber,
                               ompl::base::State *xBundle) const override = 0;
 

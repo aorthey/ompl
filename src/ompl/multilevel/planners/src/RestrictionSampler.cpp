@@ -60,9 +60,6 @@ RestrictionSampler::RestrictionSampler(const FactoredSpaceInformationPtr& factor
       statesChild_[name] = child->allocState();
       childNames_.push_back(name);
     }
-
-    OMPL_INFORM("Created restriction sampler for %d %s.", childrenPlanner_.size(),
-      (childrenPlanner_.size() > 1 ? "children" : "child"));
 }
 
 RestrictionSampler::~RestrictionSampler() 

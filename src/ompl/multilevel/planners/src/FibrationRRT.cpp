@@ -1,15 +1,17 @@
-#include "ompl/multilevel/planners/FibrationRRT.h"
+#include <ompl/multilevel/planners/FibrationRRT.h>
 
-#include "ompl/base/StateSpace.h"
-#include "ompl/base/goals/GoalState.h"
-#include "ompl/base/goals/FactoredGoal.h"
-#include "ompl/geometric/PathSimplifier.h"
-#include "ompl/multilevel/datastructures/FactoredSpaceInformation.h"
-#include "ompl/multilevel/datastructures/Projection.h"
-#include "ompl/datastructures/PDF.h"
-#include "ompl/multilevel/planners/FactoredPlanner.h"
-#include "ompl/base/terminationconditions/IterationTerminationCondition.h"
-#include "ompl/tools/config/SelfConfig.h"
+#include <ompl/base/StateSpace.h>
+#include <ompl/base/goals/GoalState.h>
+#include <ompl/base/goals/FactoredGoal.h>
+#include <ompl/geometric/PathSimplifier.h>
+#include <ompl/multilevel/datastructures/FactoredSpaceInformation.h>
+#include <ompl/multilevel/datastructures/Projection.h>
+#include <ompl/multilevel/datastructures/ProblemDefinitionHelper.h>
+#include <ompl/datastructures/PDF.h>
+#include <ompl/util/Time.h>
+#include <ompl/multilevel/planners/FactoredPlanner.h>
+#include <ompl/base/terminationconditions/IterationTerminationCondition.h>
+#include <ompl/tools/config/SelfConfig.h>
 
 using namespace ompl::multilevel;
 
@@ -68,6 +70,7 @@ void FibrationRRT::setup() {
 
   const auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
   auto name = root->getName();
+  num_factors_ = root->getAllFactors().size();
   double range = 0.0;
   sc.configurePlannerRange(range);
   range_[name] = range;
@@ -154,7 +157,7 @@ bool FibrationRRT::hasValidProblemDefinition_(const FactoredSpaceInformationPtr&
     }
     return false;
   }
-  OMPL_DEBUG("Valid problem definition for factor %s", factor->getName().c_str());
+  //OMPL_DEVMSG2("Valid problem definition for factor %s", factor->getName().c_str());
   return true;
 }
 
@@ -193,12 +196,6 @@ bool FibrationRRT::allChildrenHaveSolutions_(const FactoredSpaceInformationPtr& 
   }
   const auto& children = factor->getChildren();
 
-  //Debug
-  OMPL_DEBUG("Factor %s has %d %s.", factor->getName().c_str(), children.size(), (children.size() > 1 ? "children" : "child"));
-  for(const auto& child : children) {
-    OMPL_DEBUG(" -- %s has %s.", child->getName().c_str(), (hasSolution_(child) ? "a solution" : "no solution"));
-  }
-
   for(const auto& child : children) {
     if(!hasSolution_(child)) {
       return false;
@@ -212,7 +209,6 @@ void FibrationRRT::setSeed(size_t seed) {
   seed_ = seed;
 }
 
-std::vector<size_t> non_solution_indices;
 const FactoredSpaceInformationPtr& FibrationRRT::selectFactorExponential_() {
   //Exponential importance sampling
   PDF<int> pdf;
@@ -230,9 +226,13 @@ const FactoredSpaceInformationPtr& FibrationRRT::selectFactorExponential_() {
     }
     planner_iterator = active_planners_.find(active_factor->getName());
 
-    auto s = planner_iterator->second->getNumberOfSamples();
-    auto N = active_factor->getStateDimension();
-    auto importance = 1.0 / (pow(s, 1.0/double(N))+1.0);
+    auto p = 1.0 / active_factor->getStateDimension();
+    auto N = (double) planner_iterator->second->getNumberOfSamples();
+    auto Nd = powf(N, p);
+    auto importance = 1.0 / (Nd + 1.0);
+    //return 1.0 / (Nd + 1.0);
+    // OMPL_DEBUG("Eval space %s : %f (Nd = %f, N = %f, p = %f).", active_factor->getName().c_str(), 
+    //     importance, Nd, N, p);
     pdf.add(k, importance);
   }
 
@@ -332,10 +332,6 @@ void FibrationRRT::grow_(const FactoredSpaceInformationPtr& factor) {
   if(hasSolution_(factor)) {
     status_msg = " [has solution]";
   }
-  OMPL_DEBUG("Growing factor %s (%d/%d active factor%s)%s", factor->getName().c_str(), active_factors_.size(),
-      numFactors(), (active_factors_.size() > 1 ? "s" : ""),
-      status_msg.c_str());
-
   auto iterator = active_planners_.find(factor->getName());
   if(iterator == active_planners_.end()) {
     createPlannerForFactor_(factor);
@@ -396,7 +392,6 @@ void FibrationRRT::setLocalRange(const std::string& name, double range) {
   }
   OMPL_INFORM("Set local range %s to %f", name.c_str(), range);
   range_[name] = range;
-  OMPL_INFORM("Done");
 }
 ////////////////////////////////////////////////////////////////////////////////
 //Goal bias parameter
@@ -554,8 +549,6 @@ void FibrationRRT::createPlannerForFactor_(const FactoredSpaceInformationPtr& fa
     active_planners_.at(name)->setSamplingPerturbationBias(maybe_sampling_perturbation_bias_.value());
   }
 
-  OMPL_INFORM("Created new planner %s for factor %s", active_planners_.at(name)->getName().c_str(), name.c_str());
-
   auto iterator = problem_definitions_per_factor_.find(factor->getName());
   if(iterator == problem_definitions_per_factor_.end()) {
     OMPL_ERROR("Could not get problem definition for factor %s", name.c_str());
@@ -568,88 +561,8 @@ void FibrationRRT::createPlannerForFactor_(const FactoredSpaceInformationPtr& fa
 
 void FibrationRRT::setProblemDefinition(const base::ProblemDefinitionPtr &pdef) {
   Planner::setProblemDefinition(pdef);
-
   const auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
-
-  OMPL_INFORM("Set problem definition for factor %s", root->getName().c_str());
-
-  problem_definitions_per_factor_.insert({root->getName(), pdef});
-  if(!root->hasChildren()) {
-    return;
-  }
-
-  if(pdef->getStartStateCount() != 1) {
-    OMPL_ERROR("FibrationRRT can handle only a single start state, but you have %d states.", pdef->getStartStateCount());
-    return;
-  }
-
-  const base::State* start = pdef->getStartState(0);
-  const auto& goal_region = pdef->getGoal();
-
-  for(const auto& child : root->getChildren()) {
-    createProblemDefinition_(child, start, goal_region);
-  }
-}
-
-void FibrationRRT::createProblemDefinition_(const FactoredSpaceInformationPtr& factor, const base::State* parent_start, const base::GoalPtr& parent_goal) {
-
-  const auto& type = parent_goal->getType();
-
-  if(type != base::GoalType::GOAL_STATE && type != base::GoalType::FACTORED_GOAL) {
-    OMPL_ERROR("FibrationRRT can only handle a single goal state or a factored goal region.");
-    throw "InvalidGoal";
-  }
-
-  base::ProblemDefinitionPtr pdef = std::make_shared<base::ProblemDefinition>(factor);
-  const auto& projection = factor->getProjection();
-
-  ////////////////////////////////////////////////////////////////////////////////
-  // Project start state and add it to pdef
-  ////////////////////////////////////////////////////////////////////////////////
-  base::State* start = factor->allocState();
-  projection->project(parent_start, start);
-
-  std::stringstream ss_start;
-  factor->printState(start, ss_start);
-
-  pdef->addStartState(start);
-
-  ////////////////////////////////////////////////////////////////////////////////
-  // Project goal region and add it to pdef
-  ////////////////////////////////////////////////////////////////////////////////
-  if(type == base::GoalType::GOAL_STATE) {
-    const base::State* parent_goal_state = parent_goal->as<base::GoalState>()->getState();
-    base::State* goal_state = factor->allocState();
-    projection->project(parent_goal_state, goal_state);
-    std::stringstream ss_goal;
-    factor->printState(goal_state, ss_goal);
-    OMPL_INFORM("Project states onto factor %s \n Start %s Goal %s", 
-        factor->getName().c_str(), ss_start.str().c_str(), ss_goal.str().c_str());
-
-    auto goal = std::make_shared<base::GoalState>(factor);
-    goal->setState(goal_state);
-    goal->setThreshold(goal_threshold_);
-
-    pdef->setGoal(goal);
-  }
-  if(type == base::GoalType::FACTORED_GOAL) {
-    const auto& factored_goal = parent_goal->as<base::FactoredGoal>();
-    const auto maybe_factor_goal = factored_goal->getFactorGoal(factor->getName());
-    if(!maybe_factor_goal.has_value()) {
-      OMPL_ERROR("Could not find factor goal for factor %s", factor->getName().c_str());
-      throw "InvalidFactorGoal";
-    }
-    const auto factor_goal = maybe_factor_goal.value();
-    OMPL_INFORM("Project states onto factor %s \n Start %s and Factored Goal", 
-        factor->getName().c_str(), ss_start.str().c_str());
-    pdef->setGoal(factor_goal);
-  }
-
-  problem_definitions_per_factor_[factor->getName()] = pdef;
-
-  for(const auto& child : factor->getChildren()) {
-    createProblemDefinition_(child, start, pdef->getGoal());
-  }
+  problem_definitions_per_factor_ = computeProblemDefinitions(root, pdef, goal_threshold_);
 }
 
 std::string FibrationRRT::getIterationsProperty() const {
@@ -695,23 +608,18 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
         return base::PlannerStatus::INVALID_START;
       }
     }
-    OMPL_INFORM("Solving FactoredSpaceInformation using %d active factors.", active_factors_.size());
-    
     if(active_factors_.empty()) {
       OMPL_ERROR("Could not find any leaf nodes for factor %s", root->getName().c_str());
       return base::PlannerStatus(base::PlannerStatus::StatusType::ABORT);
     }
 
     planner_status_ = base::PlannerStatus(base::PlannerStatus::StatusType::TIMEOUT);
+
+    ompl::time::point t_start = ompl::time::now();
     while (!ptc) {
         iterations_++;
 
-        OMPL_DEBUG("%s", std::string(80, '-').c_str());
-        OMPL_DEBUG("Iteration %d", iterations_);
-        OMPL_DEBUG("%s", std::string(80, '-').c_str());
-
         const auto& selectedFactor = selectFactor_();
-        OMPL_DEBUG("Selected factor %s.", selectedFactor->getName().c_str());
 
         grow_(selectedFactor);
 
@@ -726,16 +634,17 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
           if(!isSolved_(selectedFactor)) {
             const auto& name = selectedFactor->getName();
             is_solved_.at(name) = true;
-            OMPL_INFORM(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
-            OMPL_INFORM(" >>> Solved factor %s.", name.c_str());
-            OMPL_INFORM(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
+
+            auto num_solved = is_solved_.size();
+            double t_k_end = ompl::time::seconds(ompl::time::now() - t_start);
+            OMPL_DEBUG("Solved factor %s (solved %d/%d factors) after %f seconds.", name.c_str(), num_solved, num_factors_, t_k_end);
 
             if(shouldSmoothSolutionPath(selectedFactor)) {
               smoothSolutionPath(selectedFactor);
             }
 
             if(!selectedFactor->hasParent()) {
-              OMPL_INFORM(" >>>>>> Found solution on root factor %s", name.c_str());
+              OMPL_DEBUG("Found solution on root factor %s", name.c_str());
               planner_status_ = base::PlannerStatus::StatusType::EXACT_SOLUTION;
               auto pdef = getProblemDefinition(name);
               auto path = pdef->getSolutionPath();
@@ -750,7 +659,6 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
 
           const auto& parent = selectedFactor->getParent();
           if(!isActive_(parent) && allChildrenHaveSolutions_(parent)) {
-            OMPL_INFORM("Add factor %s to active spaces.", parent->getName().c_str());
             active_factors_.push_back(parent);
             is_active_.insert({parent->getName(), true});
             is_solved_.insert({parent->getName(), false});
@@ -761,7 +669,6 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
         }
     }
 
-    int num_all_factors = problem_definitions_per_factor_.size();
     int num_solved_factors = 0;
     for(const auto& active_factor : active_factors_) {
       if(is_solved_.at(active_factor->getName())) {
@@ -770,7 +677,7 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
     }
     OMPL_INFORM(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
     OMPL_INFORM(" >>> Finished planning. Solved %d/%d factors (%d/%d active factors).", 
-        num_solved_factors, num_all_factors, active_factors_.size(), num_all_factors);
+        num_solved_factors, num_factors_, active_factors_.size(), num_factors_);
     OMPL_INFORM(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
     if(pdef_->hasExactSolution()) {
       planner_status_ = base::PlannerStatus::StatusType::EXACT_SOLUTION;
@@ -801,6 +708,5 @@ void FibrationRRT::smoothSolutionPath(const FactoredSpaceInformationPtr& factor)
   simplifier->simplifyMax(*path_geometric);
   simplifier->simplifyMax(*path_geometric);
   const size_t Nstates_after = path_geometric->getStateCount();
-  OMPL_DEBUG("Improved solution path from %d states to %d states.", Nstates_before, Nstates_after);
   pdef->addSolutionPath(path, false, 0.0, getName());
 }
