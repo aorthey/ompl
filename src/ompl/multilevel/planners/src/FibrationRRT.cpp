@@ -596,6 +596,10 @@ std::optional<ompl::base::PlannerStatus> FibrationRRT::checkForInvalidPlannerSta
   return std::nullopt;
 }
 
+size_t FibrationRRT::getNumSolvedFactors() const{
+  return std::count_if(is_solved_.cbegin(), is_solved_.cend(), [](const auto& entry) { return entry.second; });
+}
+
 ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminationCondition &ptc) {
     ////////////////////////////////////////////////////////////////////////////////
     const auto root = std::static_pointer_cast<FactoredSpaceInformation>(si_);
@@ -635,9 +639,8 @@ ompl::base::PlannerStatus FibrationRRT::solve(const ompl::base::PlannerTerminati
             const auto& name = selectedFactor->getName();
             is_solved_.at(name) = true;
 
-            auto num_solved = is_solved_.size();
             double t_k_end = ompl::time::seconds(ompl::time::now() - t_start);
-            OMPL_DEBUG("Solved factor %s (solved %d/%d factors) after %f seconds.", name.c_str(), num_solved, num_factors_, t_k_end);
+            OMPL_DEBUG("Solved factor %s (solved %d/%d factors) after %f seconds.", name.c_str(), getNumSolvedFactors(), num_factors_, t_k_end);
 
             if(shouldSmoothSolutionPath(selectedFactor)) {
               smoothSolutionPath(selectedFactor);

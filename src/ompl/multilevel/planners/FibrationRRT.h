@@ -109,6 +109,8 @@ namespace ompl
             std::vector<FactoredPlannerPtr> getChildrenPlanner_(const FactoredSpaceInformationPtr& factor) const;
             std::optional<ompl::base::PlannerStatus> checkForInvalidPlannerStatus_() const;
 
+            size_t getNumSolvedFactors() const;
+
           private:
             RNG rng_;
 
